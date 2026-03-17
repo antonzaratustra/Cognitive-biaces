@@ -9,7 +9,7 @@ Atlas-first запуск курса по когнитивным искажени
 - SQL migration под новую схему `cb_*`
 - Docker stack для `postgres + n8n + ngrok + site`
 - mini app регистрация внутри сайта
-- contract/blueprint-файлы для будущего `n8n` workflow и OpenRouter
+- importable `n8n` workflow для бота и contract/blueprint-файлы для развития логики
 
 ## Быстрый старт
 
@@ -50,12 +50,12 @@ docker compose up -d postgres n8n site ngrok-n8n ngrok-site
 - [components](/Users/antonzaratustra/Projects/Cognitive biaces/components) — lead form, atlas viewer, quiz gate
 - [data/course-data.ts](/Users/antonzaratustra/Projects/Cognitive biaces/data/course-data.ts) — seed-данные atlas, уроков и квиза
 - [supabase/migrations](/Users/antonzaratustra/Projects/Cognitive biaces/supabase/migrations) — SQL-таблицы под `cb_*`
-- [n8n](/Users/antonzaratustra/Projects/Cognitive biaces/n8n) — naming и contract под workflow
+- [n8n](/Users/antonzaratustra/Projects/Cognitive biaces/n8n) — importable workflow, naming и contract под развитие логики
 - [docs](/Users/antonzaratustra/Projects/Cognitive biaces/docs) — setup, master-template и OpenRouter contract
 
 ## Что дальше
 
 - заменить seed-данные на master-таблицу 160+ уроков
 - импортировать atlas nodes / edges в БД
-- собрать настоящий импортируемый `n8n` workflow поверх contract-файла
+- импортировать [cognitive-biases-atlas.workflow.json](/Users/antonzaratustra/Projects/Cognitive biaces/n8n/cognitive-biases-atlas.workflow.json) в текущий `n8n` и назначить credentials
 - подключить Telegram Stars invoice flow и запись entitlements

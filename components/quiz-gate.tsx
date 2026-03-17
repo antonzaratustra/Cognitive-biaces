@@ -21,14 +21,7 @@ function useTelegramQuizAccess(quizSlug: string) {
   const [accessReason, setAccessReason] = useState<string>("");
 
   useEffect(() => {
-    const initData = window.Telegram?.WebApp?.initData;
-
-    if (!initData) {
-      setAuth({ status: "not_supported" });
-      return;
-    }
-
-    async function run() {
+    async function run(initData: string) {
       const authResponse = await fetch("/api/telegram/auth", {
         method: "POST",
         headers: {
@@ -57,7 +50,41 @@ function useTelegramQuizAccess(quizSlug: string) {
       setAccessReason(accessPayload.reason || "");
     }
 
-    void run();
+    let attempts = 0;
+
+    const tryBindTelegram = () => {
+      const webApp = window.Telegram?.WebApp;
+
+      webApp?.ready?.();
+      webApp?.expand?.();
+
+      if (webApp?.initData) {
+        void run(webApp.initData);
+        return true;
+      }
+
+      return false;
+    };
+
+    if (tryBindTelegram()) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      attempts += 1;
+
+      if (tryBindTelegram()) {
+        window.clearInterval(intervalId);
+        return;
+      }
+
+      if (attempts >= 20) {
+        window.clearInterval(intervalId);
+        setAuth({ status: "not_supported" });
+      }
+    }, 250);
+
+    return () => window.clearInterval(intervalId);
   }, [quizSlug]);
 
   return { accessReason, auth, hasAccess };

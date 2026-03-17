@@ -23,21 +23,44 @@ export default function MiniAppRegisterPage() {
   const [message, setMessage] = useState("Открой это окно из Telegram, чтобы связать регистрацию с ботом.");
 
   useEffect(() => {
-    const webApp = window.Telegram?.WebApp;
-    const user = webApp?.initDataUnsafe?.user;
+    let attempts = 0;
 
-    webApp?.ready?.();
-    webApp?.expand?.();
+    const bindTelegram = () => {
+      const webApp = window.Telegram?.WebApp;
+      const user = webApp?.initDataUnsafe?.user;
 
-    if (webApp?.initData) {
-      setInitData(webApp.initData);
-      setTgName(user?.first_name || user?.username || "друг");
-      setMessage("Telegram подтвержден. Оставь email, чтобы сохранить доступ и получать обновления.");
-      setStatus("ready");
+      webApp?.ready?.();
+      webApp?.expand?.();
+
+      if (webApp?.initData) {
+        setInitData(webApp.initData);
+        setTgName(user?.first_name || user?.username || "друг");
+        setMessage("Telegram подтвержден. Оставь email, чтобы сохранить доступ и получать обновления.");
+        setStatus("ready");
+        return true;
+      }
+
+      return false;
+    };
+
+    if (bindTelegram()) {
       return;
     }
 
-    setStatus("error");
+    const intervalId = window.setInterval(() => {
+      attempts += 1;
+
+      if (bindTelegram() || attempts >= 20) {
+        window.clearInterval(intervalId);
+      }
+
+      if (attempts >= 20) {
+        setStatus("error");
+        setMessage("Telegram Mini App не передал данные авторизации. Открой эту страницу кнопкой внутри бота еще раз.");
+      }
+    }, 250);
+
+    return () => window.clearInterval(intervalId);
   }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {

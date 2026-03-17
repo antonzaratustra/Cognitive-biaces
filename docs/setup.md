@@ -93,7 +93,11 @@ N8N_WEBHOOK_URL=https://your-subdomain.ngrok-free.app/
 docker compose up -d n8n
 ```
 
-5. В `n8n` импортируй workflow blueprint:
+5. В `n8n` импортируй реальный workflow:
+
+- [cognitive-biases-atlas.workflow.json](/Users/antonzaratustra/Projects/Cognitive biaces/n8n/cognitive-biases-atlas.workflow.json)
+
+Blueprint тоже оставлен в проекте как contract-файл:
 
 - [atlas-first-course.blueprint.json](/Users/antonzaratustra/Projects/Cognitive biaces/n8n/atlas-first-course.blueprint.json)
 
@@ -120,7 +124,37 @@ docker compose up -d n8n
 - API для регистрации: [app/api/miniapp/register/route.ts](/Users/antonzaratustra/Projects/Cognitive biaces/app/api/miniapp/register/route.ts)
 - Telegram auth для сайта: [app/api/telegram/auth/route.ts](/Users/antonzaratustra/Projects/Cognitive biaces/app/api/telegram/auth/route.ts)
 
-## 7. Что такое blueprint / contract в `n8n`
+Важно:
+
+- после успешной регистрации route сам отправляет webhook в `n8n` на path `cb-miniapp-register`
+- `N8N_WEBHOOK_URL` должен смотреть на публичный адрес твоего `n8n`
+- если задан `N8N_WEBHOOK_SECRET`, сайт и `n8n` должны использовать одно и то же значение
+
+## 7. Что импортировать в `n8n`
+
+Готовый импортируемый workflow:
+
+- [cognitive-biases-atlas.workflow.json](/Users/antonzaratustra/Projects/Cognitive biaces/n8n/cognitive-biases-atlas.workflow.json)
+
+Что он уже умеет:
+
+- `/start` и регистрационный gate по логике старого рабочего курса
+- последовательная выдача уроков из `cb_user_lessons`
+- двухшаговую доставку урока: `photo + text`, если у урока есть `image_url`
+- 4 кнопки под уроком: `Следующий`, `Атлас`, `Сохранить`, `Спросить AI`
+- callback routing: `lesson:next`, `lesson:save`, `lesson:ai`, `ai:suggest:*`
+- AI-ответы через OpenRouter в контексте текущего урока
+- text + voice + готовые AI-подсказки по аналогии со старым курсом
+- webhook `cb-miniapp-register` для автозапуска курса после mini app регистрации
+
+После импорта тебе нужно:
+
+1. назначить credentials на Telegram Trigger / Telegram / Postgres / Transcribe Voice
+2. проверить node `Attach Config (Telegram)` и `Attach Config (Webhook)`
+3. убедиться, что в контейнер `n8n` передан `OPENROUTER_API_KEY`, если используешь code node `Call OpenRouter`
+4. убедиться, что в контейнер `n8n` передан `N8N_WEBHOOK_SECRET`, если хочешь автозапуск курса после регистрации
+
+## 8. Что такое blueprint / contract в `n8n`
 
 Файл [atlas-first-course.blueprint.json](/Users/antonzaratustra/Projects/Cognitive biaces/n8n/atlas-first-course.blueprint.json) сейчас не является готовым импортируемым workflow.
 
@@ -132,9 +166,9 @@ docker compose up -d n8n
 - какие блоки должны быть в workflow
 - какой payload идет в OpenRouter
 
-Следующий шаг после настройки env — собрать на его основе настоящий `n8n` workflow JSON для импорта.
+Это спецификация и naming contract. Он нужен как ориентир для следующих итераций workflow, но импортировать его в `n8n` вместо рабочего JSON не нужно.
 
-## 8. OpenRouter и AI в боте
+## 9. OpenRouter и AI в боте
 
 Для AI-ветки в `n8n` используй:
 
@@ -151,7 +185,19 @@ OPENROUTER_MODEL=google/gemma-3-27b-it:free
 
 - [docs/n8n-openrouter.md](/Users/antonzaratustra/Projects/Cognitive biaces/docs/n8n-openrouter.md)
 
-## 9. Что проверить руками после запуска
+## 10. Какие credentials создать в `n8n`
+
+- `Telegram API` credential для trigger и send nodes
+- `Postgres` credential к Supabase Postgres
+- `OpenAI` credential для node `Transcribe Voice`, если хочешь рабочую голосовую ветку
+
+Подробный чеклист:
+
+- [docs/n8n-credentials.md](/Users/antonzaratustra/Projects/Cognitive biaces/docs/n8n-credentials.md)
+
+Если не хочешь подключать голос сразу, workflow все равно можно импортировать и тестировать текстовый AI и уроки.
+
+## 11. Что проверить руками после запуска
 
 1. Лендинг открывается и атлас встроен прямо в главную
 2. Карточка искажения открывается по клику на ветвь карты
@@ -160,7 +206,36 @@ OPENROUTER_MODEL=google/gemma-3-27b-it:free
 5. Telegram auth route проходит проверку с живым `initData`
 6. `n8n` получает webhook от Telegram через `ngrok-n8n`
 
-## 10. Полезные маршруты
+## 12. Как загрузить первые уроки в Supabase
+
+Если хочешь быстро оживить бота и сайт, в проекте уже есть demo content seed:
+
+- [supabase/seeds/20260317_demo_content.sql](/Users/antonzaratustra/Projects/Cognitive biaces/supabase/seeds/20260317_demo_content.sql)
+
+Он добавляет:
+
+- 4 секции
+- 14 уроков
+- atlas nodes и связи
+- `quiz_pack_full_access`
+- demo quiz `judgment-lab`
+
+Если меняешь `data/course-data.ts`, пересобери SQL так:
+
+```bash
+npm run seed:content
+```
+
+Потом:
+
+1. открой Supabase `SQL Editor`
+2. создай новый query
+3. вставь содержимое `20260317_demo_content.sql`
+4. нажми `Run`
+
+После этого у бота появится реальный стартовый контент.
+
+## 13. Полезные маршруты
 
 - `/` — лендинг и атлас
 - `/biases/[slug]` — отдельная карточка искажения

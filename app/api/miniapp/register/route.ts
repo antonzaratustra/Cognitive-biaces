@@ -12,6 +12,43 @@ const schema = z.object({
   source: z.string().optional()
 });
 
+async function notifyN8nRegistration(input: {
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  leadId: string;
+  source: string;
+  tgId: string;
+  tgUsername: string | null;
+}) {
+  const baseUrl = process.env.N8N_WEBHOOK_URL?.replace(/\/$/, "");
+
+  if (!baseUrl) {
+    return;
+  }
+
+  try {
+    await fetch(`${baseUrl}/webhook/cb-miniapp-register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        secret: process.env.N8N_WEBHOOK_SECRET || "",
+        tg_id: input.tgId,
+        tgUsername: input.tgUsername,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        email: input.email,
+        leadId: input.leadId,
+        source: input.source
+      })
+    });
+  } catch (error) {
+    console.error("Failed to notify n8n about miniapp registration", error);
+  }
+}
+
 export async function POST(request: Request) {
   const payload = await request.json();
   const parsed = schema.safeParse(payload);
@@ -102,6 +139,16 @@ export async function POST(request: Request) {
   if (leadInsert.error) {
     return NextResponse.json({ ok: false, error: leadInsert.error.message }, { status: 500 });
   }
+
+  await notifyN8nRegistration({
+    email: parsed.data.email,
+    firstName: user.first_name || null,
+    lastName: user.last_name || null,
+    leadId: String(leadInsert.data.id),
+    source: parsed.data.source || "miniapp_register",
+    tgId: String(user.id),
+    tgUsername: user.username || null
+  });
 
   return NextResponse.json({
     ok: true,
