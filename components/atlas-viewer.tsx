@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { BrainCircuit, Search, X } from "lucide-react";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { BrainCircuit, LocateFixed, Minus, Plus, Search, X } from "lucide-react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import type { AtlasGraph, AtlasNode, Lesson, Section } from "@/lib/types";
 import { telegramDeepLink } from "@/lib/telegram";
@@ -18,6 +18,15 @@ type Point = {
   y: number;
 };
 
+type BranchLayout = {
+  angle: number;
+  id: string;
+  isLeft: boolean;
+  labelLines: string[];
+  labelPoint: Point;
+  splitPoint: Point;
+};
+
 type NodeLayout = {
   angle: number;
   branchPath: string;
@@ -29,14 +38,21 @@ type NodeLayout = {
   textPoint: Point;
 };
 
-type SubgroupLayout = {
-  angle: number;
+type SectionLayout = {
+  anchorPoint: Point;
+  centerAngle: number;
+  endAngle: number;
   id: string;
-  isLeft: boolean;
-  labelAngle: number;
-  subgroupDescription: string;
-  subgroupTitle: string;
-  textPoint: Point;
+  startAngle: number;
+  titleDot: Point;
+  titleLines: string[];
+  titlePoint: Point;
+};
+
+type ViewTransform = {
+  scale: number;
+  x: number;
+  y: number;
 };
 
 const colorMap = {
@@ -68,9 +84,31 @@ const colorMap = {
 
 const svgSize = 1180;
 const center = svgSize / 2;
+const sectionQuadrantAngles = [315, 45, 135, 225];
+const sectionSpan = 74;
+const sectionPadding = 7;
+const subgroupGap = 5;
+const sectionAnchorRadius = 178;
+const subgroupSplitRadius = 286;
+const nodeOrbitRadius = 392;
+const branchLabelRadius = 482;
+const outerArcRadius = 516;
+const sectionTitleRadius = 540;
+const maxScale = 2.6;
+
+type DragState = {
+  moved: boolean;
+  pointerId: number | null;
+  startClient: Point;
+  startTransform: ViewTransform;
+};
 
 function normalizeAngle(value: number) {
   return ((value % 360) + 360) % 360;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function sectorSpan(start: number, end: number) {
@@ -93,6 +131,10 @@ function sectorMidAngle(start: number, end: number) {
   return normalizeAngle(start + sectorSpan(start, end) / 2);
 }
 
+function signedAngleDelta(from: number, to: number) {
+  return ((to - from + 540) % 360) - 180;
+}
+
 function polar(radius: number, angle: number): Point {
   const radians = ((angle - 90) * Math.PI) / 180;
   const x = center + radius * Math.cos(radians);
@@ -101,6 +143,28 @@ function polar(radius: number, angle: number): Point {
   return {
     x: Number(x.toFixed(3)),
     y: Number(y.toFixed(3))
+  };
+}
+
+function pointFrom(point: Point, angle: number, distance: number): Point {
+  const radians = ((angle - 90) * Math.PI) / 180;
+
+  return {
+    x: Number((point.x + Math.cos(radians) * distance).toFixed(3)),
+    y: Number((point.y + Math.sin(radians) * distance).toFixed(3))
+  };
+}
+
+function controlBetween(start: Point, end: Point, bend: number): Point {
+  const midX = (start.x + end.x) / 2;
+  const midY = (start.y + end.y) / 2;
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const length = Math.hypot(dx, dy) || 1;
+
+  return {
+    x: Number((midX - (dy / length) * bend).toFixed(3)),
+    y: Number((midY + (dx / length) * bend).toFixed(3))
   };
 }
 
@@ -144,141 +208,262 @@ function getSectionMap(sections: Section[]) {
   return Object.fromEntries(sections.map((section) => [section.id, section])) as Record<string, Section>;
 }
 
+function getFitTransform(width: number, height: number): ViewTransform {
+  const padding = 28;
+  const safeWidth = Math.max(width - padding * 2, 320);
+  const safeHeight = Math.max(height - padding * 2, 320);
+  const scale = Math.min(safeWidth / svgSize, safeHeight / svgSize, 1) * 0.96;
+
+  return {
+    scale: Number(scale.toFixed(4)),
+    x: Number(((width - svgSize * scale) / 2).toFixed(3)),
+    y: Number(((height - svgSize * scale) / 2).toFixed(3))
+  };
+}
+
 export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerProps) {
   const [activeSection, setActiveSection] = useState<string>("all");
+  const [isPanning, setIsPanning] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedSlug, setSelectedSlug] = useState<string | null>(initialSlug);
+  const [viewTransform, setViewTransform] = useState<ViewTransform>({ scale: 1, x: 0, y: 0 });
   const deferredQuery = useDeferredValue(query);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const dragStateRef = useRef<DragState>({
+    moved: false,
+    pointerId: null,
+    startClient: { x: 0, y: 0 },
+    startTransform: { scale: 1, x: 0, y: 0 }
+  });
+  const minScaleRef = useRef(0.42);
+  const hasManualViewRef = useRef(false);
+  const suppressNodeClickRef = useRef(false);
 
   useEffect(() => {
     setSelectedSlug(initialSlug);
   }, [initialSlug]);
 
+  useEffect(() => {
+    const viewport = viewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    const syncViewport = (force = false) => {
+      const rect = viewport.getBoundingClientRect();
+
+      if (rect.width === 0 || rect.height === 0) {
+        return;
+      }
+
+      const fitTransform = getFitTransform(rect.width, rect.height);
+      minScaleRef.current = Math.max(Math.min(fitTransform.scale * 0.78, 0.72), 0.36);
+
+      if (force || !hasManualViewRef.current) {
+        setViewTransform(fitTransform);
+      }
+    };
+
+    syncViewport(true);
+
+    const observer = new ResizeObserver(() => syncViewport());
+    observer.observe(viewport);
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    const handleNativeWheel = (event: WheelEvent) => {
+      event.preventDefault();
+
+      if (!(event.ctrlKey || event.metaKey)) {
+        hasManualViewRef.current = true;
+
+        setViewTransform((current) => ({
+          ...current,
+          x: Number((current.x - event.deltaX).toFixed(3)),
+          y: Number((current.y - event.deltaY).toFixed(3))
+        }));
+        return;
+      }
+
+      const rect = viewport.getBoundingClientRect();
+      const originX = event.clientX - rect.left;
+      const originY = event.clientY - rect.top;
+      const zoomFactor = Math.exp(-event.deltaY * 0.0016);
+
+      hasManualViewRef.current = true;
+
+      setViewTransform((current) => {
+        const scale = clamp(current.scale * zoomFactor, minScaleRef.current, maxScale);
+
+        if (scale === current.scale) {
+          return current;
+        }
+
+        const stageX = (originX - current.x) / current.scale;
+        const stageY = (originY - current.y) / current.scale;
+
+        return {
+          scale,
+          x: Number((originX - stageX * scale).toFixed(3)),
+          y: Number((originY - stageY * scale).toFixed(3))
+        };
+      });
+    };
+
+    viewport.addEventListener("wheel", handleNativeWheel, { passive: false });
+
+    return () => viewport.removeEventListener("wheel", handleNativeWheel);
+  }, []);
+
   const sectionMap = useMemo(() => getSectionMap(graph.sections), [graph.sections]);
   const lessonMap = useMemo(() => Object.fromEntries(lessons.map((lesson) => [lesson.slug, lesson])), [lessons]);
   const normalizedQuery = deferredQuery.trim().toLowerCase();
 
-  const matchesNode = (node: AtlasNode) => {
-    const lesson = lessonMap[node.slug];
-    const section = sectionMap[node.sectionId];
-    const sectionMatch = activeSection === "all" || node.sectionId === activeSection;
-    const queryMatch =
-      normalizedQuery.length === 0 ||
-      node.title.toLowerCase().includes(normalizedQuery) ||
-      node.shortText.toLowerCase().includes(normalizedQuery) ||
-      lesson?.fullText.toLowerCase().includes(normalizedQuery) ||
-      section?.title.toLowerCase().includes(normalizedQuery);
+  const visibleNodeIds = useMemo(() => {
+    return new Set(
+      graph.nodes
+        .filter((node) => {
+          const lesson = lessonMap[node.slug];
+          const section = sectionMap[node.sectionId];
+          const sectionMatch = activeSection === "all" || node.sectionId === activeSection;
+          const queryMatch =
+            normalizedQuery.length === 0 ||
+            node.title.toLowerCase().includes(normalizedQuery) ||
+            node.shortText.toLowerCase().includes(normalizedQuery) ||
+            lesson?.fullText.toLowerCase().includes(normalizedQuery) ||
+            section?.title.toLowerCase().includes(normalizedQuery);
 
-    return sectionMatch && queryMatch;
-  };
+          return sectionMatch && queryMatch;
+        })
+        .map((node) => node.id)
+    );
+  }, [activeSection, graph.nodes, lessonMap, normalizedQuery, sectionMap]);
 
-  const nodeLayouts = useMemo(() => {
-    const layouts = new Map<string, NodeLayout>();
+  const atlasLayout = useMemo(() => {
+    const sectionLayouts = new Map<string, SectionLayout>();
+    const branchLayouts = new Map<string, BranchLayout>();
+    const nodeLayouts = new Map<string, NodeLayout>();
 
-    graph.sections.forEach((section) => {
-      const sectionNodes = graph.nodes
-        .filter((node) => node.sectionId === section.id)
-        .sort((left, right) => left.ringOrder - right.ringOrder);
+    [...graph.sections]
+      .sort((left, right) => left.sortOrder - right.sortOrder)
+      .forEach((section, sectionIndex) => {
+        const centerAngle = sectionQuadrantAngles[sectionIndex % sectionQuadrantAngles.length];
+        const rawSectionStart = centerAngle - sectionSpan / 2;
+        const rawSectionEnd = centerAngle + sectionSpan / 2;
+        const sectionAnchor = polar(sectionAnchorRadius, centerAngle);
+        const titleDot = polar(outerArcRadius, centerAngle);
+        const titlePoint = polar(sectionTitleRadius, centerAngle);
+        const sectionNodes = graph.nodes
+          .filter((node) => node.sectionId === section.id)
+          .sort((left, right) => left.ringOrder - right.ringOrder);
+        const nodesBySubgroup = Object.fromEntries(section.subgroups.map((subgroup) => [subgroup.id, [] as AtlasNode[]]));
 
-      const sectionMid = sectorMidAngle(section.startAngle, section.endAngle);
-      const innerAnchor = polar(158, sectionMid);
-      const nodesBySubgroup = Object.fromEntries(section.subgroups.map((subgroup) => [subgroup.id, [] as AtlasNode[]]));
+        sectionNodes.forEach((node) => {
+          if (!nodesBySubgroup[node.subgroupId]) {
+            nodesBySubgroup[node.subgroupId] = [];
+          }
 
-      sectionNodes.forEach((node) => {
-        if (!nodesBySubgroup[node.subgroupId]) {
-          nodesBySubgroup[node.subgroupId] = [];
-        }
+          nodesBySubgroup[node.subgroupId].push(node);
+        });
 
-        nodesBySubgroup[node.subgroupId].push(node);
-      });
+        sectionLayouts.set(section.id, {
+          anchorPoint: sectionAnchor,
+          centerAngle,
+          endAngle: rawSectionEnd,
+          id: section.id,
+          startAngle: rawSectionStart,
+          titleDot,
+          titleLines: wrapLines(section.title, 22),
+          titlePoint
+        });
 
-      const angles = sectionNodes.map((_, index) => resolveAngle(section.startAngle, section.endAngle, index, sectionNodes.length));
+        const branchGroups = section.subgroups.map((subgroup, subgroupIndex) => ({
+          label: section.callouts[subgroupIndex] ?? subgroup.title,
+          nodes: (nodesBySubgroup[subgroup.id] || []).sort((left, right) => left.ringOrder - right.ringOrder),
+          subgroup
+        }));
+        const totalUnits = branchGroups.reduce((sum, branch) => sum + Math.max(branch.nodes.length, 1), 0) || branchGroups.length || 1;
+        const totalGap = subgroupGap * Math.max(branchGroups.length - 1, 0);
+        const usableSpan = Math.max(sectionSpan - sectionPadding * 2 - totalGap, branchGroups.length || 1);
+        let traveled = 0;
 
-      section.subgroups.forEach((subgroup) => {
-        const subgroupNodes = nodesBySubgroup[subgroup.id] || [];
-        const subgroupAngles = subgroupNodes.map((node) => angles[sectionNodes.findIndex((item) => item.id === node.id)]);
-        const subgroupAngle =
-          subgroupAngles.length > 0
-            ? subgroupAngles.reduce((sum, angle) => sum + angle, 0) / subgroupAngles.length
-            : sectionMid;
-        const subgroupAnchor = polar(246, subgroupAngle);
+        branchGroups.forEach((branch) => {
+          const branchUnits = Math.max(branch.nodes.length, 1);
+          const branchSpan = usableSpan * (branchUnits / totalUnits);
+          const branchStart = rawSectionStart + sectionPadding + traveled;
+          const branchEnd = branchStart + branchSpan;
+          const branchAngle = sectorMidAngle(branchStart, branchEnd);
+          const splitPoint = polar(subgroupSplitRadius, branchAngle);
+          const labelPoint = polar(branchLabelRadius, branchAngle);
+          const isLeft = branchAngle > 180;
 
-        subgroupNodes.forEach((node) => {
-          const angle = angles[sectionNodes.findIndex((item) => item.id === node.id)];
-          const dot = polar(360, angle);
-          const labelPoint = polar(392, angle);
-          const isLeft = angle > 180;
-          const labelAngle = isLeft ? angle + 180 : angle;
-          const textOffset = isLeft ? -12 : 12;
-          const textPoint = {
-            x: labelPoint.x + textOffset,
-            y: labelPoint.y
-          };
-          const control1 = polar(186, (sectionMid + subgroupAngle) / 2);
-          const control2 = polar(306, (subgroupAngle + angle) / 2);
-          const branchPath = [
-            `M ${center} ${center}`,
-            `C ${control1.x} ${control1.y} ${innerAnchor.x} ${innerAnchor.y} ${subgroupAnchor.x} ${subgroupAnchor.y}`,
-            `S ${control2.x} ${control2.y} ${dot.x} ${dot.y}`
-          ].join(" ");
-
-          layouts.set(node.id, {
-            angle,
-            branchPath,
-            dot,
-            id: node.id,
+          branchLayouts.set(branch.subgroup.id, {
+            angle: branchAngle,
+            id: branch.subgroup.id,
             isLeft,
-            labelAngle,
-            node,
-            textPoint
+            labelLines: wrapLines(branch.label, 24),
+            labelPoint,
+            splitPoint
           });
+
+          const nodeAngles = branch.nodes.map((_, nodeIndex) =>
+            resolveAngle(branchStart, branchEnd, nodeIndex, branch.nodes.length, branch.nodes.length <= 1 ? 0 : 2)
+          );
+
+          branch.nodes.forEach((node, nodeIndex) => {
+            const angle = nodeAngles[nodeIndex];
+            const dot = polar(nodeOrbitRadius, angle);
+            const labelStart = pointFrom(dot, angle, 10);
+            const normalizedAngle = normalizeAngle(angle);
+            const isLeftSide = normalizedAngle > 180;
+            const branchTurn = signedAngleDelta(centerAngle, branchAngle);
+            const nodeTurn = signedAngleDelta(branchAngle, angle);
+            const firstControl = controlBetween(sectionAnchor, splitPoint, clamp(branchTurn * 1.2, -52, 52));
+            const secondControl = controlBetween(splitPoint, dot, clamp(nodeTurn * 1.4, -48, 48));
+            const labelAngle = normalizeAngle(normalizedAngle + (dot.y < center ? -90 : 90));
+            const branchPath = [
+              `M ${sectionAnchor.x} ${sectionAnchor.y}`,
+              `Q ${firstControl.x} ${firstControl.y} ${splitPoint.x} ${splitPoint.y}`,
+              `Q ${secondControl.x} ${secondControl.y} ${dot.x} ${dot.y}`
+            ].join(" ");
+
+            nodeLayouts.set(node.id, {
+              angle: normalizedAngle,
+              branchPath,
+              dot,
+              id: node.id,
+              isLeft: isLeftSide,
+              labelAngle,
+              node,
+              textPoint: labelStart
+            });
+          });
+
+          traveled += branchSpan + subgroupGap;
         });
       });
-    });
 
-    return layouts;
-  }, [graph.nodes, graph.sections]);
-
-  const subgroupLayouts = useMemo(() => {
-    const layouts = new Map<string, SubgroupLayout>();
-
-    graph.sections.forEach((section) => {
-      const sectionNodes = graph.nodes
-        .filter((node) => node.sectionId === section.id)
-        .sort((left, right) => left.ringOrder - right.ringOrder);
-
-      const angles = sectionNodes.map((_, index) => resolveAngle(section.startAngle, section.endAngle, index, sectionNodes.length));
-
-      section.subgroups.forEach((subgroup) => {
-        const subgroupNodes = sectionNodes.filter((node) => node.subgroupId === subgroup.id);
-        const subgroupAngles = subgroupNodes.map((node) => angles[sectionNodes.findIndex((item) => item.id === node.id)]);
-        const angle =
-          subgroupAngles.length > 0
-            ? subgroupAngles.reduce((sum, item) => sum + item, 0) / subgroupAngles.length
-            : sectorMidAngle(section.startAngle, section.endAngle);
-        const labelPoint = polar(256, angle);
-        const isLeft = angle > 180;
-
-        layouts.set(subgroup.id, {
-          angle,
-          id: subgroup.id,
-          isLeft,
-          labelAngle: isLeft ? angle + 180 : angle,
-          subgroupDescription: subgroup.description,
-          subgroupTitle: subgroup.title,
-          textPoint: labelPoint
-        });
-      });
-    });
-
-    return layouts;
+    return {
+      branchLayouts,
+      nodeLayouts,
+      sectionLayouts
+    };
   }, [graph.nodes, graph.sections]);
 
   const orbitDots = useMemo(
     () =>
-      Array.from({ length: 60 }, (_, index) => {
-        const angle = index * 6;
-        return polar(332, angle);
+      Array.from({ length: 72 }, (_, index) => {
+        const angle = index * 5;
+        return polar(outerArcRadius - 18, angle);
       }),
     []
   );
@@ -286,6 +471,324 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
   const selectedNode = selectedSlug ? graph.nodes.find((node) => node.slug === selectedSlug) || null : null;
   const selectedLesson = selectedNode ? lessonMap[selectedNode.slug] : null;
   const selectedSection = selectedNode ? sectionMap[selectedNode.sectionId] : null;
+
+  const handleNodeSelect = (slug: string) => {
+    if (suppressNodeClickRef.current) {
+      suppressNodeClickRef.current = false;
+      return;
+    }
+
+    setSelectedSlug(slug);
+  };
+
+  const zoomAtPoint = (nextScale: number, clientX: number, clientY: number) => {
+    const viewport = viewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    const rect = viewport.getBoundingClientRect();
+    const originX = clientX - rect.left;
+    const originY = clientY - rect.top;
+
+    hasManualViewRef.current = true;
+
+    setViewTransform((current) => {
+      const scale = clamp(nextScale, minScaleRef.current, maxScale);
+
+      if (scale === current.scale) {
+        return current;
+      }
+
+      const stageX = (originX - current.x) / current.scale;
+      const stageY = (originY - current.y) / current.scale;
+
+      return {
+        scale,
+        x: Number((originX - stageX * scale).toFixed(3)),
+        y: Number((originY - stageY * scale).toFixed(3))
+      };
+    });
+  };
+
+  const handleZoomStep = (multiplier: number) => {
+    const viewport = viewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    const rect = viewport.getBoundingClientRect();
+    zoomAtPoint(viewTransform.scale * multiplier, rect.left + rect.width / 2, rect.top + rect.height / 2);
+  };
+
+  const handleResetView = () => {
+    const viewport = viewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    hasManualViewRef.current = false;
+    setViewTransform(getFitTransform(viewport.clientWidth, viewport.clientHeight));
+  };
+
+  const clearDragState = () => {
+    dragStateRef.current = {
+      moved: false,
+      pointerId: null,
+      startClient: { x: 0, y: 0 },
+      startTransform: viewTransform
+    };
+    setIsPanning(false);
+  };
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) {
+      return;
+    }
+
+    const target = event.target as HTMLElement;
+
+    if (target.closest("button, a, input, label")) {
+      return;
+    }
+
+    suppressNodeClickRef.current = false;
+    dragStateRef.current = {
+      moved: false,
+      pointerId: event.pointerId,
+      startClient: { x: event.clientX, y: event.clientY },
+      startTransform: viewTransform
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsPanning(true);
+  };
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const dragState = dragStateRef.current;
+
+    if (dragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const deltaX = event.clientX - dragState.startClient.x;
+    const deltaY = event.clientY - dragState.startClient.y;
+
+    if (!dragState.moved && Math.hypot(deltaX, deltaY) < 4) {
+      return;
+    }
+
+    dragState.moved = true;
+    hasManualViewRef.current = true;
+
+    setViewTransform((current) => ({
+      ...current,
+      x: Number((dragState.startTransform.x + deltaX).toFixed(3)),
+      y: Number((dragState.startTransform.y + deltaY).toFixed(3))
+    }));
+  };
+
+  const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const dragState = dragStateRef.current;
+
+    if (dragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    if (dragState.moved) {
+      suppressNodeClickRef.current = true;
+    }
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    clearDragState();
+  };
+
+  const atlasCanvas = useMemo(
+    () => (
+      <svg
+        aria-labelledby="atlas-title atlas-desc"
+        className="radial-atlas-svg"
+        role="img"
+        viewBox={`0 0 ${svgSize} ${svgSize}`}
+      >
+        <title id="atlas-title">Радиальный атлас когнитивных искажений</title>
+        <desc id="atlas-desc">
+          В центре — ядро карты, на первом кольце — четыре режима мышления, на втором — ветви подгрупп, на третьем —
+          конкретные когнитивные искажения, а на внешнем кольце — названия больших разделов.
+        </desc>
+
+        <circle className="atlas-orbit atlas-orbit--outer" cx={center} cy={center} r={outerArcRadius} />
+        <circle className="atlas-orbit atlas-orbit--middle" cx={center} cy={center} r={nodeOrbitRadius} />
+        <circle className="atlas-orbit atlas-orbit--inner" cx={center} cy={center} r={subgroupSplitRadius} />
+        <circle className="atlas-orbit atlas-orbit--core" cx={center} cy={center} r={sectionAnchorRadius} />
+
+        {orbitDots.map((dotPoint, index) => (
+          <circle key={`orbit-dot-${index}`} className="atlas-orbit-dot" cx={dotPoint.x} cy={dotPoint.y} r={2.2} />
+        ))}
+
+        {graph.sections.map((section) => {
+          const color = colorMap[section.colorToken];
+          const sectionLayout = atlasLayout.sectionLayouts.get(section.id);
+          const sectionSelected = activeSection === "all" || activeSection === section.id;
+          const sectionOpacity = sectionSelected ? 1 : 0.22;
+
+          if (!sectionLayout) {
+            return null;
+          }
+
+          const sectionLineStart = polar(132, sectionLayout.centerAngle);
+          const titleStartY = sectionLayout.titlePoint.y - ((sectionLayout.titleLines.length - 1) * 14);
+
+          return (
+            <g key={section.id} style={{ opacity: sectionOpacity }}>
+              <path
+                className="atlas-sector-arc"
+                d={describeArc(outerArcRadius, sectionLayout.startAngle, sectionLayout.endAngle)}
+                style={{ stroke: color.ring }}
+              />
+              <line
+                className="atlas-section-connector"
+                stroke={color.ring}
+                strokeOpacity="0.42"
+                x1={sectionLineStart.x}
+                x2={sectionLayout.anchorPoint.x}
+                y1={sectionLineStart.y}
+                y2={sectionLayout.anchorPoint.y}
+              />
+              <circle className="atlas-section-anchor" cx={sectionLayout.anchorPoint.x} cy={sectionLayout.anchorPoint.y} fill={color.dot} r={5.4} />
+              <circle className="atlas-section-title-dot" cx={sectionLayout.titleDot.x} cy={sectionLayout.titleDot.y} fill={color.dot} r={4.8} />
+              <text className="atlas-sector-title" fill={color.text} textAnchor="middle" x={sectionLayout.titlePoint.x} y={titleStartY}>
+                {sectionLayout.titleLines.map((line, index) => (
+                  <tspan key={`${section.id}-${line}-${index}`} dy={index === 0 ? 0 : 28} x={sectionLayout.titlePoint.x}>
+                    {line}
+                  </tspan>
+                ))}
+              </text>
+            </g>
+          );
+        })}
+
+        {graph.sections.flatMap((section) =>
+          section.subgroups.map((subgroup) => {
+            const layout = atlasLayout.branchLayouts.get(subgroup.id);
+            const color = colorMap[section.colorToken];
+
+            if (!layout) {
+              return null;
+            }
+
+            const selected = activeSection === "all" || section.id === activeSection;
+            const opacity = selected ? 1 : 0.24;
+            const textAnchor = layout.isLeft ? "end" : "start";
+            const textX = layout.labelPoint.x + (layout.isLeft ? -14 : 14);
+            const textStartY = layout.labelPoint.y - ((layout.labelLines.length - 1) * 8);
+            const stemStart = polar(branchLabelRadius - 26, layout.angle);
+
+            return (
+              <g key={subgroup.id} style={{ opacity }}>
+                <circle className="atlas-subgroup-dot" cx={layout.splitPoint.x} cy={layout.splitPoint.y} fill={color.dot} r={3.8} />
+                <line
+                  className="atlas-branch-label-stem"
+                  stroke={color.ring}
+                  strokeOpacity="0.5"
+                  x1={stemStart.x}
+                  x2={layout.labelPoint.x}
+                  y1={stemStart.y}
+                  y2={layout.labelPoint.y}
+                />
+                <circle className="atlas-branch-label-dot" cx={layout.labelPoint.x} cy={layout.labelPoint.y} fill={color.dot} r={4.2} />
+                <text className="atlas-branch-label" fill={color.text} textAnchor={textAnchor} x={textX} y={textStartY}>
+                  {layout.labelLines.map((line, index) => (
+                    <tspan key={`${layout.id}-${line}-${index}`} dy={index === 0 ? 0 : 16} x={textX}>
+                      {line}
+                    </tspan>
+                  ))}
+                </text>
+              </g>
+            );
+          })
+        )}
+
+        {graph.nodes.map((node) => {
+          const layout = atlasLayout.nodeLayouts.get(node.id);
+
+          if (!layout) {
+            return null;
+          }
+
+          const color = colorMap[node.colorToken];
+          const visible = visibleNodeIds.has(node.id);
+          const selected = selectedSlug === node.slug;
+          const opacity = visible ? 1 : 0.12;
+
+          return (
+            <g
+              key={node.id}
+              className="atlas-node-group"
+              style={{ opacity }}
+              onPointerDownCapture={(event) => event.stopPropagation()}
+              onClick={() => handleNodeSelect(node.slug)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  handleNodeSelect(node.slug);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+            >
+              <path className="atlas-branch" d={layout.branchPath} style={{ stroke: color.ring }} />
+              <circle className="atlas-dot-glow" cx={layout.dot.x} cy={layout.dot.y} fill={color.glow} r={selected ? 17 : 12} />
+              <circle
+                className="atlas-dot"
+                cx={layout.dot.x}
+                cy={layout.dot.y}
+                fill={selected ? "#fffaf0" : color.dot}
+                r={selected ? 6.8 : 4.8}
+                stroke={selected ? color.ring : "transparent"}
+                strokeWidth={selected ? 2.4 : 0}
+              />
+
+              <g transform={`translate(${layout.textPoint.x} ${layout.textPoint.y}) rotate(${layout.labelAngle})`}>
+                <text
+                  className={selected ? "atlas-node-label atlas-node-label--selected" : "atlas-node-label"}
+                  dominantBaseline="middle"
+                  fill={color.text}
+                  textAnchor="start"
+                  x={0}
+                  y={0}
+                >
+                  {node.title}
+                </text>
+              </g>
+            </g>
+          );
+        })}
+
+        <g className="atlas-core">
+          <circle className="atlas-core__halo" cx={center} cy={center} r={122} />
+          <circle className="atlas-core__disk" cx={center} cy={center} r={102} />
+          <foreignObject height="126" width="126" x={center - 63} y={center - 72}>
+            <div className="atlas-core__icon">
+              <BrainCircuit size={54} strokeWidth={1.7} />
+            </div>
+          </foreignObject>
+          <text className="atlas-core__title" textAnchor="middle" x={center} y={center + 56}>
+            Когнитивные искажения
+          </text>
+          <text className="atlas-core__subtitle" textAnchor="middle" x={center} y={center + 82}>
+            4 режима • 160+ уроков
+          </text>
+        </g>
+      </svg>
+    ),
+    [activeSection, atlasLayout.branchLayouts, atlasLayout.nodeLayouts, atlasLayout.sectionLayouts, graph.nodes, graph.sections, orbitDots, selectedSlug, visibleNodeIds]
+  );
 
   return (
     <div className="atlas-shell">
@@ -336,214 +839,35 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
       </div>
 
       <div className="glass-card radial-atlas-frame">
-        <div className="radial-atlas-scroll">
-          <svg
-            aria-labelledby="atlas-title atlas-desc"
-            className="radial-atlas-svg"
-            role="img"
-            viewBox={`0 0 ${svgSize} ${svgSize}`}
+        <div
+          ref={viewportRef}
+          className={isPanning ? "radial-atlas-viewport radial-atlas-viewport--panning" : "radial-atlas-viewport"}
+          onPointerCancel={handlePointerUp}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+        >
+          <div className="glass-card atlas-canvas-hud">
+            <button aria-label="Отдалить атлас" type="button" onClick={() => handleZoomStep(1 / 1.16)}>
+              <Minus size={15} />
+            </button>
+            <span>{Math.round(viewTransform.scale * 100)}%</span>
+            <button aria-label="Приблизить атлас" type="button" onClick={() => handleZoomStep(1.16)}>
+              <Plus size={15} />
+            </button>
+            <button aria-label="Сбросить положение атласа" type="button" onClick={handleResetView}>
+              <LocateFixed size={15} />
+            </button>
+          </div>
+
+          <div
+            className="radial-atlas-stage"
+            style={{
+              transform: `translate(${viewTransform.x}px, ${viewTransform.y}px) scale(${viewTransform.scale})`
+            }}
           >
-            <title id="atlas-title">Радиальный атлас когнитивных искажений</title>
-            <desc id="atlas-desc">
-              В центре — ядро карты, по кругу — четыре сектора когнитивных искажений, их подгруппы и конкретные
-              искажения, расположенные на внешнем радиусе.
-            </desc>
-
-            <circle className="atlas-orbit atlas-orbit--outer" cx={center} cy={center} r={394} />
-            <circle className="atlas-orbit atlas-orbit--middle" cx={center} cy={center} r={332} />
-            <circle className="atlas-orbit atlas-orbit--inner" cx={center} cy={center} r={248} />
-            <circle className="atlas-orbit atlas-orbit--core" cx={center} cy={center} r={144} />
-
-            {orbitDots.map((dotPoint, index) => (
-              <circle key={`orbit-dot-${index}`} className="atlas-orbit-dot" cx={dotPoint.x} cy={dotPoint.y} r={2.4} />
-            ))}
-
-            {graph.sections.map((section) => {
-              const color = colorMap[section.colorToken];
-              const titleAngle = sectorMidAngle(section.startAngle, section.endAngle);
-              const titlePoint = polar(472, titleAngle);
-              const titleLines = wrapLines(section.title, 23);
-              const sectionSelected = activeSection === "all" || activeSection === section.id;
-              const sectionOpacity = sectionSelected ? 1 : 0.22;
-              const calloutAngles = section.callouts.map((_, index) =>
-                resolveAngle(section.startAngle, section.endAngle, index, section.callouts.length, 14)
-              );
-
-              return (
-                <g key={section.id} style={{ opacity: sectionOpacity }}>
-                  <path
-                    className="atlas-sector-arc"
-                    d={describeArc(402, section.startAngle, section.endAngle)}
-                    style={{ stroke: color.ring }}
-                  />
-
-                  {calloutAngles.map((angle, index) => {
-                    const dotPoint = polar(430, angle);
-                    const textPoint = polar(500, angle);
-                    const align = angle > 180 ? "end" : "start";
-                    const shift = angle > 180 ? -16 : 16;
-                    const lines = wrapLines(section.callouts[index], 24);
-
-                    return (
-                      <g key={`${section.id}-callout-${index}`} className="atlas-callout">
-                        <circle cx={dotPoint.x} cy={dotPoint.y} fill={color.dot} r={6.5} />
-                        <line
-                          stroke={color.ring}
-                          strokeOpacity="0.56"
-                          x1={dotPoint.x}
-                          x2={textPoint.x + shift * 0.6}
-                          y1={dotPoint.y}
-                          y2={textPoint.y}
-                        />
-                        <text fill={color.text} textAnchor={align} x={textPoint.x + shift} y={textPoint.y}>
-                          {lines.map((line, lineIndex) => (
-                            <tspan
-                              key={`${section.id}-${index}-${lineIndex}`}
-                              dy={lineIndex === 0 ? 0 : 18}
-                              x={textPoint.x + shift}
-                            >
-                              {line}
-                            </tspan>
-                          ))}
-                        </text>
-                      </g>
-                    );
-                  })}
-
-                  <text
-                    className="atlas-sector-title"
-                    fill={color.text}
-                    textAnchor={titleAngle > 180 ? "end" : "start"}
-                    x={titlePoint.x + (titleAngle > 180 ? -12 : 12)}
-                    y={titlePoint.y}
-                  >
-                    {titleLines.map((line, index) => (
-                      <tspan
-                        key={`${section.id}-${line}-${index}`}
-                        dy={index === 0 ? 0 : 30}
-                        x={titlePoint.x + (titleAngle > 180 ? -12 : 12)}
-                      >
-                        {line}
-                      </tspan>
-                    ))}
-                  </text>
-                </g>
-              );
-            })}
-
-            {graph.sections.flatMap((section) =>
-              section.subgroups.map((subgroup) => {
-                const layout = subgroupLayouts.get(subgroup.id);
-                const color = colorMap[section.colorToken];
-
-                if (!layout) {
-                  return null;
-                }
-
-                const selected = activeSection === "all" || section.id === activeSection;
-                const opacity = selected ? 1 : 0.24;
-
-                return (
-                  <g key={subgroup.id} style={{ opacity }}>
-                    <circle className="atlas-subgroup-dot" cx={layout.textPoint.x} cy={layout.textPoint.y} fill={color.dot} r={3.2} />
-                    <g transform={`translate(${layout.textPoint.x} ${layout.textPoint.y}) rotate(${layout.labelAngle})`}>
-                      <text
-                        className="atlas-subgroup-label"
-                        fill={color.text}
-                        textAnchor={layout.isLeft ? "end" : "start"}
-                        x={layout.isLeft ? -12 : 12}
-                        y={-4}
-                      >
-                        {layout.subgroupTitle}
-                      </text>
-                      <text
-                        className="atlas-subgroup-description"
-                        fill={color.text}
-                        textAnchor={layout.isLeft ? "end" : "start"}
-                        x={layout.isLeft ? -12 : 12}
-                        y={16}
-                      >
-                        {wrapLines(layout.subgroupDescription, 26).map((line, index) => (
-                          <tspan key={`${layout.id}-${line}-${index}`} dy={index === 0 ? 0 : 14} x={layout.isLeft ? -12 : 12}>
-                            {line}
-                          </tspan>
-                        ))}
-                      </text>
-                    </g>
-                  </g>
-                );
-              })
-            )}
-
-            {graph.nodes.map((node) => {
-              const layout = nodeLayouts.get(node.id);
-
-              if (!layout) {
-                return null;
-              }
-
-              const color = colorMap[node.colorToken];
-              const visible = matchesNode(node);
-              const selected = selectedSlug === node.slug;
-              const opacity = visible ? 1 : 0.12;
-
-              return (
-                <g
-                  key={node.id}
-                  className="atlas-node-group"
-                  style={{ opacity }}
-                  onClick={() => setSelectedSlug(node.slug)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      setSelectedSlug(node.slug);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <path className="atlas-branch" d={layout.branchPath} style={{ stroke: color.ring }} />
-                  <circle className="atlas-dot-glow" cx={layout.dot.x} cy={layout.dot.y} fill={color.glow} r={selected ? 17 : 12} />
-                  <circle
-                    className="atlas-dot"
-                    cx={layout.dot.x}
-                    cy={layout.dot.y}
-                    fill={selected ? "#fffaf0" : color.dot}
-                    r={selected ? 6.8 : 4.8}
-                    stroke={selected ? color.ring : "transparent"}
-                    strokeWidth={selected ? 2.4 : 0}
-                  />
-
-                  <g transform={`translate(${layout.textPoint.x} ${layout.textPoint.y}) rotate(${layout.labelAngle})`}>
-                    <text
-                      className={selected ? "atlas-node-label atlas-node-label--selected" : "atlas-node-label"}
-                      fill={color.text}
-                      textAnchor={layout.isLeft ? "end" : "start"}
-                      y={5}
-                    >
-                      {node.title}
-                    </text>
-                  </g>
-                </g>
-              );
-            })}
-
-            <g className="atlas-core">
-              <circle className="atlas-core__halo" cx={center} cy={center} r={122} />
-              <circle className="atlas-core__disk" cx={center} cy={center} r={102} />
-              <foreignObject height="126" width="126" x={center - 63} y={center - 72}>
-                <div className="atlas-core__icon">
-                  <BrainCircuit size={54} strokeWidth={1.7} />
-                </div>
-              </foreignObject>
-              <text className="atlas-core__title" textAnchor="middle" x={center} y={center + 56}>
-                Когнитивные искажения
-              </text>
-              <text className="atlas-core__subtitle" textAnchor="middle" x={center} y={center + 82}>
-                4 режима • 160+ уроков
-              </text>
-            </g>
-          </svg>
+            {atlasCanvas}
+          </div>
         </div>
       </div>
 
