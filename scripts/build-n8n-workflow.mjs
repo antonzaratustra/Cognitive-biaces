@@ -62,7 +62,7 @@ const workflow = {
       [-3056, 1328],
       {
         jsCode:
-          "const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://cognitive-biaces.vercel.app';\nreturn [{\n  json: {\n    ...$json,\n    site_url: siteUrl,\n    miniapp_url: `${siteUrl}/miniapp/register`,\n    quiz_url: `${siteUrl}/quizzes/judgment-lab`,\n    openrouter_endpoint: 'https://openrouter.ai/api/v1/chat/completions',\n    openrouter_model: process.env.OPENROUTER_MODEL || 'qwen/qwen3-coder:free'\n  }\n}];"
+          "const siteUrl = 'https://cognitive-biaces.vercel.app';\nreturn [{\n  json: {\n    ...$json,\n    site_url: siteUrl,\n    miniapp_url: `${siteUrl}/miniapp/register`,\n    quiz_url: `${siteUrl}/quizzes/judgment-lab`,\n    openrouter_endpoint: 'https://openrouter.ai/api/v1/chat/completions',\n    openrouter_model: 'qwen/qwen3-coder:free',\n    openrouter_api_key: '',\n    webhook_secret: ''\n  }\n}];"
       },
       { typeVersion: 2 }
     ),
@@ -73,7 +73,7 @@ const workflow = {
       [-3056, 1936],
       {
         jsCode:
-          "const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://cognitive-biaces.vercel.app';\nconst body = $json.body || {};\nconst expected = process.env.N8N_WEBHOOK_SECRET || '';\nreturn [{\n  json: {\n    ...body,\n    secret_ok: !expected || body.secret === expected,\n    tg_id: String(body.tg_id || ''),\n    chat_id: String(body.tg_id || ''),\n    first_name: body.firstName || '',\n    last_name: body.lastName || '',\n    tg_username: body.tgUsername || '',\n    email: body.email || '',\n    site_url: siteUrl,\n    miniapp_url: `${siteUrl}/miniapp/register`,\n    quiz_url: `${siteUrl}/quizzes/judgment-lab`,\n    openrouter_endpoint: 'https://openrouter.ai/api/v1/chat/completions',\n    openrouter_model: process.env.OPENROUTER_MODEL || 'qwen/qwen3-coder:free'\n  }\n}];"
+          "const siteUrl = 'https://cognitive-biaces.vercel.app';\nconst body = $json.body || {};\nconst expected = '';\nreturn [{\n  json: {\n    ...body,\n    secret_ok: !expected || body.secret === expected,\n    tg_id: String(body.tg_id || ''),\n    chat_id: String(body.tg_id || ''),\n    first_name: body.firstName || '',\n    last_name: body.lastName || '',\n    tg_username: body.tgUsername || '',\n    email: body.email || '',\n    site_url: siteUrl,\n    miniapp_url: `${siteUrl}/miniapp/register`,\n    quiz_url: `${siteUrl}/quizzes/judgment-lab`,\n    openrouter_endpoint: 'https://openrouter.ai/api/v1/chat/completions',\n    openrouter_model: 'qwen/qwen3-coder:free',\n    openrouter_api_key: '',\n    webhook_secret: expected\n  }\n}];"
       },
       { typeVersion: 2 }
     ),
@@ -129,7 +129,7 @@ const workflow = {
       [-2384, 2000],
       {
         jsCode:
-          "return [{\n  json: {\n    ...$json,\n    course_entry_source: 'registration_webhook'\n  }\n}];"
+          "const source = $node['Attach Config (Webhook)']?.json || {};\nreturn [{\n  json: {\n    ...source,\n    course_entry_source: 'registration_webhook'\n  }\n}];"
       },
       { typeVersion: 2 }
     ),
@@ -186,7 +186,7 @@ const workflow = {
       {
         operation: "executeQuery",
         query:
-          "select\n  u.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ String($json.message_id || '').replace(/'/g, \"''\") }}'::text as message_id,\n  '{{ String($json.current_message_text || '').replace(/'/g, \"''\") }}'::text as current_message_text,\n  '{{ String($json.callback_data || '').replace(/'/g, \"''\") }}'::text as callback_data,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model\nfrom (select 1) seed\nleft join public.cb_users u on u.tg_id='{{ $json.tg_id }}'\nlimit 1;",
+          "select\n  u.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ String($json.message_id || '').replace(/'/g, \"''\") }}'::text as message_id,\n  '{{ String($json.current_message_text || '').replace(/'/g, \"''\") }}'::text as current_message_text,\n  '{{ String($json.callback_data || '').replace(/'/g, \"''\") }}'::text as callback_data,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key\nfrom (select 1) seed\nleft join public.cb_users u on u.tg_id='{{ $json.tg_id }}'\nlimit 1;",
         options: {}
       },
       { typeVersion: 2.6, alwaysOutputData: true }
@@ -360,10 +360,10 @@ const workflow = {
       {
         operation: "executeQuery",
         query:
-          "update public.cb_user_lessons\nset status = 'completed',\n    completed_at = now()\nwhere user_tg_id = '{{ $json.tg_id }}'\n  and lesson_id = '{{ $json.lesson_id }}';",
+          "update public.cb_user_lessons\nset status = 'completed',\n    completed_at = now()\nwhere user_tg_id = '{{ $node[\"Normalize Callback Route\"].json.tg_id }}'\n  and lesson_id = '{{ $node[\"Normalize Callback Route\"].json.lesson_id }}';",
         options: {}
       },
-      { typeVersion: 2.6 }
+      { typeVersion: 2.6, alwaysOutputData: true }
     ),
     node(
       "prepare-course-entry-callback",
@@ -372,7 +372,7 @@ const workflow = {
       [-1040, 1024],
       {
         jsCode:
-          "return [{\n  json: {\n    ...$json,\n    course_entry_source: 'next_lesson'\n  }\n}];"
+          "const source = $node['Normalize Callback Route']?.json || {};\nreturn [{\n  json: {\n    ...source,\n    course_entry_source: 'next_lesson'\n  }\n}];"
       },
       { typeVersion: 2 }
     ),
@@ -387,7 +387,7 @@ const workflow = {
           "insert into public.cb_saved_lessons (user_tg_id, lesson_id)\nvalues ('{{ $json.tg_id }}', '{{ $json.lesson_id }}')\non conflict (user_tg_id, lesson_id) do nothing;",
         options: {}
       },
-      { typeVersion: 2.6 }
+      { typeVersion: 2.6, alwaysOutputData: true }
     ),
     node(
       "send-saved-confirmation",
@@ -395,7 +395,7 @@ const workflow = {
       "n8n-nodes-base.telegram",
       [-1264, 1152],
       {
-        chatId: "={{ $json.chat_id }}",
+        chatId: "={{ $node['Normalize Callback Route'].json.chat_id }}",
         text: "=📌 Сохранил урок. К нему можно будет вернуться позже и быстро освежить ключевую мысль.",
         additionalFields: {
           appendAttribution: false
@@ -411,7 +411,7 @@ const workflow = {
       {
         operation: "executeQuery",
         query:
-          "select\n  l.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.message_id || '').replace(/'/g, \"''\") }}'::text as message_id,\n  '{{ String($json.current_message_text || '').replace(/'/g, \"''\") }}'::text as current_message_text,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model\nfrom public.cb_lessons l\nwhere l.id = '{{ $json.lesson_id }}'\nlimit 1;",
+          "select\n  l.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.message_id || '').replace(/'/g, \"''\") }}'::text as message_id,\n  '{{ String($json.current_message_text || '').replace(/'/g, \"''\") }}'::text as current_message_text,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key\nfrom public.cb_lessons l\nwhere l.id = '{{ $json.lesson_id }}'\nlimit 1;",
         options: {}
       },
       { typeVersion: 2.6 }
@@ -495,7 +495,7 @@ const workflow = {
       "n8n-nodes-base.telegram",
       [-1264, 1408],
       {
-        chatId: "={{ $json.chat_id }}",
+        chatId: "={{ $node['Normalize Callback Route'].json.chat_id }}",
         text: "Надо подумать, сейчас отвечу...",
         additionalFields: {
           appendAttribution: false
@@ -510,7 +510,7 @@ const workflow = {
       [-1040, 1408],
       {
         jsCode:
-          "return [{\n  json: {\n    ...$json,\n    message_type: 'text',\n    question_text: String($json.question_text || '').trim()\n  }\n}];"
+          "const source = $node['Normalize Callback Route']?.json || {};\nreturn [{\n  json: {\n    ...source,\n    message_type: 'text',\n    question_text: String(source.question_text || '').trim()\n  }\n}];"
       },
       { typeVersion: 2 }
     ),
@@ -631,7 +631,7 @@ const workflow = {
       {
         operation: "executeQuery",
         query:
-          "select\n  u.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ String($json.last_name || '').replace(/'/g, \"''\") }}'::text as last_name,\n  '{{ String($json.tg_username || '').replace(/'/g, \"''\") }}'::text as tg_username,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.start_payload || '').replace(/'/g, \"''\") }}'::text as start_payload\nfrom (select 1) seed\nleft join public.cb_users u on u.tg_id='{{ $json.tg_id }}'\nlimit 1;",
+          "select\n  u.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ String($json.last_name || '').replace(/'/g, \"''\") }}'::text as last_name,\n  '{{ String($json.tg_username || '').replace(/'/g, \"''\") }}'::text as tg_username,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key,\n  '{{ String($json.start_payload || '').replace(/'/g, \"''\") }}'::text as start_payload\nfrom (select 1) seed\nleft join public.cb_users u on u.tg_id='{{ $json.tg_id }}'\nlimit 1;",
         options: {}
       },
       { typeVersion: 2.6, alwaysOutputData: true }
@@ -666,7 +666,7 @@ const workflow = {
       {
         operation: "executeQuery",
         query:
-          "insert into public.cb_users (tg_id, tg_username, first_name, last_name, updated_at)\nvalues (\n  '{{ $json.tg_id }}',\n  {{ $json.tg_username ? \"'\" + String($json.tg_username).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  {{ $json.first_name ? \"'\" + String($json.first_name).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  {{ $json.last_name ? \"'\" + String($json.last_name).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  now()\n)\non conflict (tg_id) do update set\n  tg_username = excluded.tg_username,\n  first_name = coalesce(public.cb_users.first_name, excluded.first_name),\n  last_name = coalesce(public.cb_users.last_name, excluded.last_name),\n  updated_at = now()\nreturning\n  tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model;",
+          "insert into public.cb_users (tg_id, tg_username, first_name, last_name, updated_at)\nvalues (\n  '{{ $json.tg_id }}',\n  {{ $json.tg_username ? \"'\" + String($json.tg_username).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  {{ $json.first_name ? \"'\" + String($json.first_name).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  {{ $json.last_name ? \"'\" + String($json.last_name).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  now()\n)\non conflict (tg_id) do update set\n  tg_username = excluded.tg_username,\n  first_name = coalesce(public.cb_users.first_name, excluded.first_name),\n  last_name = coalesce(public.cb_users.last_name, excluded.last_name),\n  updated_at = now()\nreturning\n  tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key;",
         options: {}
       },
       { typeVersion: 2.6 }
@@ -705,7 +705,7 @@ const workflow = {
       {
         operation: "executeQuery",
         query:
-          "select\n  u.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ String($json.message_text || '').replace(/'/g, \"''\") }}'::text as message_text,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model\nfrom (select 1) seed\nleft join public.cb_users u on u.tg_id='{{ $json.tg_id }}'\nlimit 1;",
+          "select\n  u.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ String($json.message_text || '').replace(/'/g, \"''\") }}'::text as message_text,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key\nfrom (select 1) seed\nleft join public.cb_users u on u.tg_id='{{ $json.tg_id }}'\nlimit 1;",
         options: {}
       },
       { typeVersion: 2.6, alwaysOutputData: true }
@@ -738,7 +738,7 @@ const workflow = {
       "n8n-nodes-base.telegram",
       [-1488, 1648],
       {
-        chatId: "={{ $json.chat_id }}",
+        chatId: "={{ $node['Get Text User'].json.chat_id }}",
         text: "Надо подумать, сейчас отвечу...",
         additionalFields: {
           appendAttribution: false
@@ -753,7 +753,7 @@ const workflow = {
       [-1264, 1648],
       {
         jsCode:
-          "return [{\n  json: {\n    ...$json,\n    lesson_id: '',\n    message_type: 'text',\n    question_text: String($json.message_text || '').trim()\n  }\n}];"
+          "const source = $node['Get Text User']?.json || {};\nreturn [{\n  json: {\n    ...source,\n    lesson_id: '',\n    message_type: 'text',\n    question_text: String(source.message_text || '').trim()\n  }\n}];"
       },
       { typeVersion: 2 }
     ),
@@ -765,7 +765,7 @@ const workflow = {
       {
         operation: "executeQuery",
         query:
-          "select\n  u.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model\nfrom (select 1) seed\nleft join public.cb_users u on u.tg_id='{{ $json.tg_id }}'\nlimit 1;",
+          "select\n  u.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key\nfrom (select 1) seed\nleft join public.cb_users u on u.tg_id='{{ $json.tg_id }}'\nlimit 1;",
         options: {}
       },
       { typeVersion: 2.6, alwaysOutputData: true }
@@ -798,7 +798,7 @@ const workflow = {
       "n8n-nodes-base.telegram",
       [-1488, 1808],
       {
-        chatId: "={{ $json.chat_id }}",
+        chatId: "={{ $node['Get Voice User'].json.chat_id }}",
         text: "Слушаю голосовой вопрос, сейчас разберу его в контексте урока...",
         additionalFields: {
           appendAttribution: false
@@ -849,7 +849,7 @@ const workflow = {
       {
         operation: "executeQuery",
         query:
-          "with ins as (\n  insert into public.cb_user_lessons (user_tg_id, lesson_id, status)\n  select '{{ $json.tg_id }}', l.id, 'new'\n  from public.cb_lessons l\n  where coalesce(l.published_at, now()) <= now()\n  on conflict (user_tg_id, lesson_id) do nothing\n  returning lesson_id\n)\nselect\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  count(*)::int as inserted_count\nfrom ins;",
+          "with ins as (\n  insert into public.cb_user_lessons (user_tg_id, lesson_id, status)\n  select '{{ $json.tg_id }}', l.id, 'new'\n  from public.cb_lessons l\n  where coalesce(l.published_at, now()) <= now()\n  on conflict (user_tg_id, lesson_id) do nothing\n  returning lesson_id\n)\nselect\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key,\n  count(*)::int as inserted_count\nfrom ins;",
         options: {}
       },
       { typeVersion: 2.6, alwaysOutputData: true }
@@ -862,7 +862,7 @@ const workflow = {
       {
         operation: "executeQuery",
         query:
-          "with target as (\n  select ul.id\n  from public.cb_user_lessons ul\n  join public.cb_lessons l on l.id = ul.lesson_id\n  where ul.user_tg_id = '{{ $json.tg_id }}'\n    and ul.status in ('new', 'in_progress')\n  order by case when ul.status = 'in_progress' then 0 else 1 end, l.sort_order asc\n  limit 1\n)\nupdate public.cb_user_lessons ul\nset status = 'in_progress',\n    last_opened_at = now()\nwhere ul.id in (select id from target)\nreturning ul.lesson_id,\n          '{{ $json.tg_id }}'::text as tg_id,\n          '{{ $json.chat_id }}'::text as chat_id,\n          '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n          '{{ $json.site_url }}'::text as site_url,\n          '{{ $json.quiz_url }}'::text as quiz_url,\n          '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n          '{{ $json.openrouter_model }}'::text as openrouter_model;",
+          "with target as (\n  select ul.id\n  from public.cb_user_lessons ul\n  join public.cb_lessons l on l.id = ul.lesson_id\n  where ul.user_tg_id = '{{ $json.tg_id }}'\n    and ul.status in ('new', 'in_progress')\n  order by case when ul.status = 'in_progress' then 0 else 1 end, l.sort_order asc\n  limit 1\n)\nupdate public.cb_user_lessons ul\nset status = 'in_progress',\n    last_opened_at = now()\nwhere ul.id in (select id from target)\nreturning ul.lesson_id,\n          '{{ $json.tg_id }}'::text as tg_id,\n          '{{ $json.chat_id }}'::text as chat_id,\n          '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n          '{{ $json.site_url }}'::text as site_url,\n          '{{ $json.quiz_url }}'::text as quiz_url,\n          '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n          '{{ $json.openrouter_model }}'::text as openrouter_model,\n          '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key;",
         options: {}
       },
       { typeVersion: 2.6, alwaysOutputData: true }
@@ -875,7 +875,7 @@ const workflow = {
       {
         operation: "executeQuery",
         query:
-          "select\n  l.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model\nfrom public.cb_user_lessons ul\njoin public.cb_lessons l on l.id = ul.lesson_id\nwhere ul.user_tg_id = '{{ $json.tg_id }}'\n  and ul.status = 'in_progress'\norder by l.sort_order asc\nlimit 1;",
+          "select\n  l.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key\nfrom public.cb_user_lessons ul\njoin public.cb_lessons l on l.id = ul.lesson_id\nwhere ul.user_tg_id = '{{ $json.tg_id }}'\n  and ul.status = 'in_progress'\norder by l.sort_order asc\nlimit 1;",
         options: {}
       },
       { typeVersion: 2.6, alwaysOutputData: true }
@@ -1044,7 +1044,7 @@ const workflow = {
       {
         operation: "executeQuery",
         query:
-          "select\n  l.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.question_text || '').replace(/'/g, \"''\") }}'::text as question_text,\n  '{{ String($json.message_type || 'text').replace(/'/g, \"''\") }}'::text as message_type,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model\nfrom public.cb_lessons l\nwhere l.id = coalesce(\n  {{ $json.lesson_id ? \"'\" + String($json.lesson_id).replace(/'/g, \"''\") + \"'\" : 'null' }}::text,\n  (\n    select ul.lesson_id\n    from public.cb_user_lessons ul\n    join public.cb_lessons cl on cl.id = ul.lesson_id\n    where ul.user_tg_id = '{{ $json.tg_id }}'\n      and ul.status = 'in_progress'\n    order by cl.sort_order asc\n    limit 1\n  ),\n  (\n    select ul.lesson_id\n    from public.cb_user_lessons ul\n    join public.cb_lessons cl on cl.id = ul.lesson_id\n    where ul.user_tg_id = '{{ $json.tg_id }}'\n      and ul.status = 'completed'\n    order by ul.completed_at desc nulls last, cl.sort_order asc\n    limit 1\n  )\n)\nlimit 1;",
+          "select\n  l.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.question_text || '').replace(/'/g, \"''\") }}'::text as question_text,\n  '{{ String($json.message_type || 'text').replace(/'/g, \"''\") }}'::text as message_type,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key\nfrom public.cb_lessons l\nwhere l.id = coalesce(\n  {{ $json.lesson_id ? \"'\" + String($json.lesson_id).replace(/'/g, \"''\") + \"'\" : 'null' }}::text,\n  (\n    select ul.lesson_id\n    from public.cb_user_lessons ul\n    join public.cb_lessons cl on cl.id = ul.lesson_id\n    where ul.user_tg_id = '{{ $json.tg_id }}'\n      and ul.status = 'in_progress'\n    order by cl.sort_order asc\n    limit 1\n  ),\n  (\n    select ul.lesson_id\n    from public.cb_user_lessons ul\n    join public.cb_lessons cl on cl.id = ul.lesson_id\n    where ul.user_tg_id = '{{ $json.tg_id }}'\n      and ul.status = 'completed'\n    order by ul.completed_at desc nulls last, cl.sort_order asc\n    limit 1\n  )\n)\nlimit 1;",
         options: {}
       },
       { typeVersion: 2.6, alwaysOutputData: true }
@@ -1118,20 +1118,40 @@ const workflow = {
       [80, 1744],
       {
         jsCode:
-          "function safe(name) {\n  try {\n    return $node[name].json || null;\n  } catch (error) {\n    return null;\n  }\n}\nconst lesson = safe('Resolve AI Lesson') || {};\nconst thread = safe('Ensure AI Thread') || {};\nconst callbackInput = safe('Prepare AI Suggest Input');\nconst textInput = safe('Prepare AI Text Input');\nconst voiceInput = safe('Prepare AI Voice Input');\nconst source = callbackInput?.question_text ? callbackInput : (voiceInput?.question_text ? voiceInput : textInput || {});\nconst history = $items('Get AI History', 0).map((item) => item.json).filter((item) => item.message_text).reverse().map((item) => ({ role: item.role, content: item.message_text }));\nconst questionText = String(source.question_text || lesson.question_text || '').trim();\nconst firstName = source.first_name || lesson.first_name || 'друг';\nconst related = Array.isArray(lesson.related_slugs) ? lesson.related_slugs.join(', ') : String(lesson.related_slugs || '');\nconst systemPrompt = [\n  'Ты — практичный помощник курса по когнитивным искажениям.',\n  `Обращайся к пользователю по имени: ${firstName}.`,\n  `Текущий урок: ${lesson.title || ''}`,\n  lesson.short_text || '',\n  lesson.ai_context || '',\n  related ? `Связанные искажения: ${related}` : '',\n  'Отвечай по-русски, коротко, ясно и прикладно.',\n  'Опирайся на контекст урока, не выдумывай лишние факты.',\n  'Если полезно, дай 2-4 конкретных шага или вопроса для самопроверки.',\n  'Для Telegram используй только HTML-теги <b>, без markdown.'\n].filter(Boolean).join('\\n\\n');\nreturn [{\n  json: {\n    chat_id: lesson.chat_id || thread.chat_id || source.chat_id,\n    lesson_id: lesson.id || thread.lesson_id || source.lesson_id,\n    message_type: source.message_type || 'text',\n    openrouter_endpoint: lesson.openrouter_endpoint || source.openrouter_endpoint || 'https://openrouter.ai/api/v1/chat/completions',\n    provider: 'openrouter',\n    question_text: questionText,\n    request_body: {\n      model: lesson.openrouter_model || source.openrouter_model || 'qwen/qwen3-coder:free',\n      messages: [\n        { role: 'system', content: systemPrompt },\n        ...history,\n        { role: 'user', content: questionText || 'Помоги понять текущее искажение.' }\n      ]\n    },\n    site_url: lesson.site_url || source.site_url || 'https://cognitive-biaces.vercel.app',\n    tg_id: lesson.tg_id || thread.tg_id || source.tg_id,\n    thread_id: thread.thread_id,\n    system_prompt: systemPrompt\n  }\n}];"
+          "function safe(name) {\n  try {\n    return $node[name].json || null;\n  } catch (error) {\n    return null;\n  }\n}\nconst lesson = safe('Resolve AI Lesson') || {};\nconst thread = safe('Ensure AI Thread') || {};\nconst callbackInput = safe('Prepare AI Suggest Input');\nconst textInput = safe('Prepare AI Text Input');\nconst voiceInput = safe('Prepare AI Voice Input');\nconst source = callbackInput?.question_text ? callbackInput : (voiceInput?.question_text ? voiceInput : textInput || {});\nconst history = $items('Get AI History', 0).map((item) => item.json).filter((item) => item.message_text).reverse().map((item) => ({ role: item.role, content: item.message_text }));\nconst questionText = String(source.question_text || lesson.question_text || '').trim();\nconst firstName = source.first_name || lesson.first_name || 'друг';\nconst related = Array.isArray(lesson.related_slugs) ? lesson.related_slugs.join(', ') : String(lesson.related_slugs || '');\nconst systemPrompt = [\n  'Ты — практичный помощник курса по когнитивным искажениям.',\n  `Обращайся к пользователю по имени: ${firstName}.`,\n  `Текущий урок: ${lesson.title || ''}`,\n  lesson.short_text || '',\n  lesson.ai_context || '',\n  related ? `Связанные искажения: ${related}` : '',\n  'Отвечай по-русски, коротко, ясно и прикладно.',\n  'Опирайся на контекст урока, не выдумывай лишние факты.',\n  'Если полезно, дай 2-4 конкретных шага или вопроса для самопроверки.',\n  'Для Telegram используй только HTML-теги <b>, без markdown.'\n].filter(Boolean).join('\\n\\n');\nreturn [{\n  json: {\n    chat_id: lesson.chat_id || thread.chat_id || source.chat_id,\n    lesson_id: lesson.id || thread.lesson_id || source.lesson_id,\n    message_type: source.message_type || 'text',\n    openrouter_endpoint: lesson.openrouter_endpoint || source.openrouter_endpoint || 'https://openrouter.ai/api/v1/chat/completions',\n    openrouter_api_key: lesson.openrouter_api_key || source.openrouter_api_key || '',\n    provider: 'openrouter',\n    question_text: questionText,\n    request_body: {\n      model: lesson.openrouter_model || source.openrouter_model || 'qwen/qwen3-coder:free',\n      messages: [\n        { role: 'system', content: systemPrompt },\n        ...history,\n        { role: 'user', content: questionText || 'Помоги понять текущее искажение.' }\n      ]\n    },\n    site_url: lesson.site_url || source.site_url || 'https://cognitive-biaces.vercel.app',\n    tg_id: lesson.tg_id || thread.tg_id || source.tg_id,\n    thread_id: thread.thread_id,\n    system_prompt: systemPrompt\n  }\n}];"
       },
       { typeVersion: 2 }
     ),
     node(
-      "call-openrouter",
-      "Call OpenRouter",
-      "n8n-nodes-base.code",
+      "basic-llm-chain",
+      "Basic LLM Chain",
+      "@n8n/n8n-nodes-langchain.chainLlm",
       [304, 1744],
       {
-        jsCode:
-          "const apiKey = process.env.OPENROUTER_API_KEY || '';\nif (!apiKey) {\n  return [{ json: { ...$json, status: 'missing_key', answer_text: 'AI пока не отвечает, потому что в контейнер n8n не передан OPENROUTER_API_KEY.' } }];\n}\nconst response = await fetch($json.openrouter_endpoint || 'https://openrouter.ai/api/v1/chat/completions', {\n  method: 'POST',\n  headers: {\n    Authorization: `Bearer ${apiKey}`,\n    'Content-Type': 'application/json',\n    'HTTP-Referer': $json.site_url || 'https://cognitive-biaces.vercel.app',\n    'X-Title': 'Cognitive Bias Atlas'\n  },\n  body: JSON.stringify($json.request_body)\n});\nif (!response.ok) {\n  return [{ json: { ...$json, status: 'error', answer_text: `OpenRouter вернул ошибку ${response.status}. Проверь модель и доступность провайдера.` } }];\n}\nconst data = await response.json();\nreturn [{ json: { ...$json, status: 'ok', response: data } }];"
+        promptType: "define",
+        text: "={{ $json.question_text }}",
+        hasOutputParser: true,
+        messages: {
+          messageValues: [
+            {
+              message: "={{ $json.system_prompt }}"
+            }
+          ]
+        },
+        batching: {}
       },
-      { typeVersion: 2 }
+      { typeVersion: 1.9 }
+    ),
+    node(
+      "openrouter-chat-model",
+      "OpenRouter Chat Model",
+      "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      [304, 1968],
+      {
+        model: "qwen/qwen3-coder:free",
+        options: {}
+      },
+      { typeVersion: 1 }
     ),
     node(
       "parse-ai-response",
@@ -1140,7 +1160,7 @@ const workflow = {
       [528, 1744],
       {
         jsCode:
-          "const answer = $json.response?.choices?.[0]?.message?.content || $json.answer_text || 'AI не вернул текстовый ответ.';\nreturn [{\n  json: {\n    ...$json,\n    answer_text: String(answer).trim(),\n    model: $json.response?.model || $json.request_body?.model || 'unknown',\n    input_tokens: $json.response?.usage?.prompt_tokens || null,\n    output_tokens: $json.response?.usage?.completion_tokens || null\n  }\n}];"
+          "const source = $node['Build AI Prompt']?.json || {};\nconst answer = $json.text || $json.output || $json.response?.choices?.[0]?.message?.content || $json.answer_text || 'AI не вернул текстовый ответ.';\nreturn [{\n  json: {\n    ...source,\n    answer_text: String(answer).trim(),\n    model: $json.model || source.request_body?.model || 'unknown',\n    input_tokens: $json.response?.usage?.prompt_tokens || null,\n    output_tokens: $json.response?.usage?.completion_tokens || null,\n    status: $json.status || 'ok'\n  }\n}];"
       },
       { typeVersion: 2 }
     ),
@@ -1152,7 +1172,7 @@ const workflow = {
       {
         operation: "executeQuery",
         query:
-          "insert into public.cb_ai_messages (thread_id, role, message_text, message_type, provider, model)\nvalues (\n  '{{ $json.thread_id }}',\n  'user',\n  '{{ String($json.question_text || '').replace(/'/g, \"''\") }}',\n  '{{ String($json.message_type || 'text').replace(/'/g, \"''\") }}',\n  'telegram',\n  'input'\n);",
+          "insert into public.cb_ai_messages (thread_id, role, message_text, message_type, provider, model)\nvalues (\n  '{{ $node[\"Parse AI Response\"].json.thread_id }}',\n  'user',\n  '{{ String($node[\"Parse AI Response\"].json.question_text || '').replace(/'/g, \"''\") }}',\n  '{{ String($node[\"Parse AI Response\"].json.message_type || 'text').replace(/'/g, \"''\") }}',\n  'telegram',\n  'input'\n);",
         options: {}
       },
       { typeVersion: 2.6 }
@@ -1165,7 +1185,7 @@ const workflow = {
       {
         operation: "executeQuery",
         query:
-          "insert into public.cb_ai_messages (thread_id, role, message_text, message_type, provider, model)\nvalues (\n  '{{ $json.thread_id }}',\n  'assistant',\n  '{{ String($json.answer_text || '').replace(/'/g, \"''\") }}',\n  'text',\n  'openrouter',\n  '{{ String($json.model || '').replace(/'/g, \"''\") }}'\n);\n\ninsert into public.cb_ai_usage (user_tg_id, lesson_id, provider, model, input_tokens, output_tokens, status)\nvalues (\n  '{{ $json.tg_id }}',\n  '{{ $json.lesson_id }}',\n  'openrouter',\n  '{{ String($json.model || '').replace(/'/g, \"''\") }}',\n  {{ $json.input_tokens || 'null' }},\n  {{ $json.output_tokens || 'null' }},\n  '{{ String($json.status || 'ok').replace(/'/g, \"''\") }}'\n);",
+          "insert into public.cb_ai_messages (thread_id, role, message_text, message_type, provider, model)\nvalues (\n  '{{ $node[\"Parse AI Response\"].json.thread_id }}',\n  'assistant',\n  '{{ String($node[\"Parse AI Response\"].json.answer_text || '').replace(/'/g, \"''\") }}',\n  'text',\n  'openrouter',\n  '{{ String($node[\"Parse AI Response\"].json.model || '').replace(/'/g, \"''\") }}'\n);\n\ninsert into public.cb_ai_usage (user_tg_id, lesson_id, provider, model, input_tokens, output_tokens, status)\nvalues (\n  '{{ $node[\"Parse AI Response\"].json.tg_id }}',\n  '{{ $node[\"Parse AI Response\"].json.lesson_id }}',\n  'openrouter',\n  '{{ String($node[\"Parse AI Response\"].json.model || '').replace(/'/g, \"''\") }}',\n  {{ $node[\"Parse AI Response\"].json.input_tokens || 'null' }},\n  {{ $node[\"Parse AI Response\"].json.output_tokens || 'null' }},\n  '{{ String($node[\"Parse AI Response\"].json.status || 'ok').replace(/'/g, \"''\") }}'\n);",
         options: {}
       },
       { typeVersion: 2.6 }
@@ -1177,7 +1197,7 @@ const workflow = {
       [1200, 1680],
       {
         jsCode:
-          "let text = (items?.[0]?.json?.answer_text) ?? (items?.[0]?.json?.text) ?? '';\nif (typeof text !== 'string') text = String(text);\ntext = text.replace(/^###\\s*(.+)$/gm, '<b>$1</b>');\ntext = text.replace(/\\*\\*(.+?)\\*\\*/gs, '<b>$1</b>');\ntext = text.replace(/__(.+?)__/gs, '<b>$1</b>');\ntext = text.replace(/\\*(.+?)\\*/gs, '$1');\ntext = text.replace(/_(.+?)_/gs, '$1');\ntext = text.replace(/```+/g, '').replace(/`+/g, '');\ntext = text.replace(/\\\\n/g, '\\n');\ntext = text.replace(/<script[\\s\\S]*?<\\/script>/gi, '');\ntext = text.replace(/\\son\\w+=\"[^\"]*\"/gi, '');\ntext = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nfor (const tag of ['b','i','u','s','code','pre','a','tg-spoiler']) {\n  const open = new RegExp(`&lt;${tag}(\\\\s+[^&]*?)?&gt;`, 'gi');\n  const close = new RegExp(`&lt;\\\\/${tag}\\\\s*&gt;`, 'gi');\n  text = text.replace(open, (_m, attrs='') => `<${tag}${attrs}>`).replace(close, `</${tag}>`);\n}\nitems[0].json.answer_text = text;\nreturn items;"
+          "const source = $node['Parse AI Response']?.json || {};\nlet text = source.answer_text ?? source.text ?? '';\nif (typeof text !== 'string') text = String(text);\ntext = text.replace(/^###\\s*(.+)$/gm, '<b>$1</b>');\ntext = text.replace(/\\*\\*(.+?)\\*\\*/gs, '<b>$1</b>');\ntext = text.replace(/__(.+?)__/gs, '<b>$1</b>');\ntext = text.replace(/\\*(.+?)\\*/gs, '$1');\ntext = text.replace(/_(.+?)_/gs, '$1');\ntext = text.replace(/```+/g, '').replace(/`+/g, '');\ntext = text.replace(/\\\\n/g, '\\n');\ntext = text.replace(/<script[\\s\\S]*?<\\/script>/gi, '');\ntext = text.replace(/\\son\\w+=\"[^\"]*\"/gi, '');\ntext = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nfor (const tag of ['b','i','u','s','code','pre','a','tg-spoiler']) {\n  const open = new RegExp(`&lt;${tag}(\\\\s+[^&]*?)?&gt;`, 'gi');\n  const close = new RegExp(`&lt;\\\\/${tag}\\\\s*&gt;`, 'gi');\n  text = text.replace(open, (_m, attrs='') => `<${tag}${attrs}>`).replace(close, `</${tag}>`);\n}\nreturn [{ json: { ...source, answer_text: text } }];"
       },
       { typeVersion: 2 }
     ),
@@ -1316,8 +1336,10 @@ const workflow = {
     },
     "Prepare Callback Context": {
       main: [
-        [{ node: "Answer Callback", type: "main", index: 0 }],
-        [{ node: "Get Callback User", type: "main", index: 0 }]
+        [
+          { node: "Answer Callback", type: "main", index: 0 },
+          { node: "Get Callback User", type: "main", index: 0 }
+        ]
       ]
     },
     "Get Callback User": {
@@ -1477,9 +1499,12 @@ const workflow = {
       main: [[{ node: "Build AI Prompt", type: "main", index: 0 }]]
     },
     "Build AI Prompt": {
-      main: [[{ node: "Call OpenRouter", type: "main", index: 0 }]]
+      main: [[{ node: "Basic LLM Chain", type: "main", index: 0 }]]
     },
-    "Call OpenRouter": {
+    "OpenRouter Chat Model": {
+      ai_languageModel: [[{ node: "Basic LLM Chain", type: "ai_languageModel", index: 0 }]]
+    },
+    "Basic LLM Chain": {
       main: [[{ node: "Parse AI Response", type: "main", index: 0 }]]
     },
     "Parse AI Response": {
