@@ -614,16 +614,76 @@ main {
   position: absolute;
   top: 0;
   left: 0;
-  width: 1180px;
-  height: 1180px;
+  width: 1640px;
+  height: 1640px;
   transform-origin: 0 0;
   will-change: transform;
 }
 
+.atlas-section-badges {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.atlas-section-badge {
+  position: absolute;
+  display: grid;
+  gap: 10px;
+  max-width: 220px;
+  color: rgba(255, 246, 239, 0.96);
+}
+
+.atlas-section-badge--top-left {
+  top: 26px;
+  left: 26px;
+  justify-items: start;
+  text-align: left;
+}
+
+.atlas-section-badge--top-right {
+  top: 26px;
+  right: 26px;
+  justify-items: end;
+  text-align: right;
+}
+
+.atlas-section-badge--bottom-right {
+  right: 26px;
+  bottom: 86px;
+  justify-items: end;
+  text-align: right;
+}
+
+.atlas-section-badge--bottom-left {
+  bottom: 26px;
+  left: 26px;
+  justify-items: start;
+  text-align: left;
+}
+
+.atlas-section-badge__dot {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.18);
+}
+
+.atlas-section-badge__title {
+  display: grid;
+  gap: 2px;
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .radial-atlas-svg {
   display: block;
-  width: 1180px;
-  height: 1180px;
+  width: 1640px;
+  height: 1640px;
   overflow: visible;
 }
 
@@ -717,17 +777,16 @@ main {
   filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.12));
 }
 
-.atlas-node-group {
-  cursor: pointer;
-}
-
 .atlas-branch {
   fill: none;
   stroke-linecap: round;
   stroke-width: 1.6;
+  pointer-events: none;
 }
 
+.atlas-dot-glow,
 .atlas-dot {
+  pointer-events: none;
   transition:
     r 0.2s ease,
     fill 0.2s ease;
@@ -736,6 +795,12 @@ main {
 .atlas-node-label {
   font-size: 12px;
   letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+.atlas-node-hit {
+  cursor: pointer;
+  pointer-events: all;
 }
 
 .atlas-node-label--selected {
@@ -1067,8 +1132,8 @@ main {
   }
 
   .radial-atlas-svg {
-    width: 1180px;
-    height: 1180px;
+    width: 1640px;
+    height: 1640px;
   }
 
   .radial-atlas-viewport {
@@ -1078,5 +1143,44 @@ main {
   .atlas-canvas-hud {
     right: 14px;
     bottom: 14px;
+  }
+
+  .atlas-section-badge {
+    max-width: 150px;
+    gap: 8px;
+  }
+
+  .atlas-section-badge--top-left,
+  .atlas-section-badge--top-right,
+  .atlas-section-badge--bottom-left {
+    top: 18px;
+    left: 18px;
+    right: auto;
+    bottom: auto;
+    text-align: left;
+    justify-items: start;
+  }
+
+  .atlas-section-badge--top-right {
+    left: auto;
+    right: 18px;
+    text-align: right;
+    justify-items: end;
+  }
+
+  .atlas-section-badge--bottom-right {
+    right: 18px;
+    bottom: 74px;
+    text-align: right;
+    justify-items: end;
+  }
+
+  .atlas-section-badge--bottom-left {
+    top: auto;
+    bottom: 18px;
+  }
+
+  .atlas-section-badge__title {
+    font-size: 0.96rem;
   }
 }

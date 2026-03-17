@@ -55,6 +55,13 @@ type ViewTransform = {
   y: number;
 };
 
+const sectionCornerClasses = [
+  "atlas-section-badge atlas-section-badge--top-left",
+  "atlas-section-badge atlas-section-badge--top-right",
+  "atlas-section-badge atlas-section-badge--bottom-right",
+  "atlas-section-badge atlas-section-badge--bottom-left"
+] as const;
+
 const colorMap = {
   "soft-blue": {
     dot: "#86b8ff",
@@ -82,7 +89,7 @@ const colorMap = {
   }
 } as const;
 
-const svgSize = 1180;
+const svgSize = 1640;
 const center = svgSize / 2;
 const sectionQuadrantAngles = [315, 45, 135, 225];
 const sectionSpan = 74;
@@ -91,8 +98,8 @@ const subgroupGap = 5;
 const sectionAnchorRadius = 178;
 const subgroupSplitRadius = 286;
 const nodeOrbitRadius = 392;
-const branchLabelRadius = 482;
-const outerArcRadius = 516;
+const branchLabelRadius = 760;
+const outerArcRadius = 796;
 const sectionTitleRadius = 540;
 const maxScale = 2.6;
 
@@ -324,6 +331,10 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
     return () => viewport.removeEventListener("wheel", handleNativeWheel);
   }, []);
 
+  const orderedSections = useMemo(
+    () => [...graph.sections].sort((left, right) => left.sortOrder - right.sortOrder),
+    [graph.sections]
+  );
   const sectionMap = useMemo(() => getSectionMap(graph.sections), [graph.sections]);
   const lessonMap = useMemo(() => Object.fromEntries(lessons.map((lesson) => [lesson.slug, lesson])), [lessons]);
   const normalizedQuery = deferredQuery.trim().toLowerCase();
@@ -353,9 +364,7 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
     const branchLayouts = new Map<string, BranchLayout>();
     const nodeLayouts = new Map<string, NodeLayout>();
 
-    [...graph.sections]
-      .sort((left, right) => left.sortOrder - right.sortOrder)
-      .forEach((section, sectionIndex) => {
+    orderedSections.forEach((section, sectionIndex) => {
         const centerAngle = sectionQuadrantAngles[sectionIndex % sectionQuadrantAngles.length];
         const rawSectionStart = centerAngle - sectionSpan / 2;
         const rawSectionEnd = centerAngle + sectionSpan / 2;
@@ -422,7 +431,7 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
           branch.nodes.forEach((node, nodeIndex) => {
             const angle = nodeAngles[nodeIndex];
             const dot = polar(nodeOrbitRadius, angle);
-            const labelStart = pointFrom(dot, angle, 10);
+            const labelStart = pointFrom(dot, angle, 26);
             const normalizedAngle = normalizeAngle(angle);
             const isLeftSide = normalizedAngle > 180;
             const branchTurn = signedAngleDelta(centerAngle, branchAngle);
@@ -457,7 +466,7 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
       nodeLayouts,
       sectionLayouts
     };
-  }, [graph.nodes, graph.sections]);
+  }, [graph.nodes, orderedSections]);
 
   const orbitDots = useMemo(
     () =>
@@ -619,7 +628,7 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
         <title id="atlas-title">Радиальный атлас когнитивных искажений</title>
         <desc id="atlas-desc">
           В центре — ядро карты, на первом кольце — четыре режима мышления, на втором — ветви подгрупп, на третьем —
-          конкретные когнитивные искажения, а на внешнем кольце — названия больших разделов.
+          конкретные когнитивные искажения, а названия больших разделов закреплены по углам области просмотра.
         </desc>
 
         <circle className="atlas-orbit atlas-orbit--outer" cx={center} cy={center} r={outerArcRadius} />
@@ -642,7 +651,6 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
           }
 
           const sectionLineStart = polar(132, sectionLayout.centerAngle);
-          const titleStartY = sectionLayout.titlePoint.y - ((sectionLayout.titleLines.length - 1) * 14);
 
           return (
             <g key={section.id} style={{ opacity: sectionOpacity }}>
@@ -662,13 +670,6 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
               />
               <circle className="atlas-section-anchor" cx={sectionLayout.anchorPoint.x} cy={sectionLayout.anchorPoint.y} fill={color.dot} r={5.4} />
               <circle className="atlas-section-title-dot" cx={sectionLayout.titleDot.x} cy={sectionLayout.titleDot.y} fill={color.dot} r={4.8} />
-              <text className="atlas-sector-title" fill={color.text} textAnchor="middle" x={sectionLayout.titlePoint.x} y={titleStartY}>
-                {sectionLayout.titleLines.map((line, index) => (
-                  <tspan key={`${section.id}-${line}-${index}`} dy={index === 0 ? 0 : 28} x={sectionLayout.titlePoint.x}>
-                    {line}
-                  </tspan>
-                ))}
-              </text>
             </g>
           );
         })}
@@ -725,23 +726,12 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
           const visible = visibleNodeIds.has(node.id);
           const selected = selectedSlug === node.slug;
           const opacity = visible ? 1 : 0.12;
+          const isLowerRight = layout.dot.x > center && layout.dot.y > center;
+          const nodeLabelAnchor = layout.dot.y < center || isLowerRight ? "start" : "end";
+          const nodeLabelAngle = isLowerRight ? normalizeAngle(layout.labelAngle + 180) : layout.labelAngle;
 
           return (
-            <g
-              key={node.id}
-              className="atlas-node-group"
-              style={{ opacity }}
-              onPointerDownCapture={(event) => event.stopPropagation()}
-              onClick={() => handleNodeSelect(node.slug)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  handleNodeSelect(node.slug);
-                }
-              }}
-              role="button"
-              tabIndex={0}
-            >
+            <g key={node.id} className="atlas-node-group" style={{ opacity }}>
               <path className="atlas-branch" d={layout.branchPath} style={{ stroke: color.ring }} />
               <circle className="atlas-dot-glow" cx={layout.dot.x} cy={layout.dot.y} fill={color.glow} r={selected ? 17 : 12} />
               <circle
@@ -754,18 +744,37 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
                 strokeWidth={selected ? 2.4 : 0}
               />
 
-              <g transform={`translate(${layout.textPoint.x} ${layout.textPoint.y}) rotate(${layout.labelAngle})`}>
+              <g transform={`translate(${layout.textPoint.x} ${layout.textPoint.y}) rotate(${nodeLabelAngle})`}>
                 <text
                   className={selected ? "atlas-node-label atlas-node-label--selected" : "atlas-node-label"}
                   dominantBaseline="middle"
                   fill={color.text}
-                  textAnchor="start"
+                  textAnchor={nodeLabelAnchor}
                   x={0}
                   y={0}
                 >
                   {node.title}
                 </text>
               </g>
+
+              <circle
+                aria-label={node.title}
+                className="atlas-node-hit"
+                cx={layout.dot.x}
+                cy={layout.dot.y}
+                fill="transparent"
+                onClick={() => handleNodeSelect(node.slug)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleNodeSelect(node.slug);
+                  }
+                }}
+                onPointerDownCapture={(event) => event.stopPropagation()}
+                r={16}
+                role="button"
+                tabIndex={visible ? 0 : -1}
+              />
             </g>
           );
         })}
@@ -847,6 +856,33 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
         >
+          <div className="atlas-section-badges" aria-hidden="true">
+            {orderedSections.map((section, sectionIndex) => {
+              const color = colorMap[section.colorToken];
+              const sectionLayout = atlasLayout.sectionLayouts.get(section.id);
+              const sectionSelected = activeSection === "all" || activeSection === section.id;
+
+              if (!sectionLayout) {
+                return null;
+              }
+
+              return (
+                <div
+                  key={`badge-${section.id}`}
+                  className={sectionCornerClasses[sectionIndex % sectionCornerClasses.length]}
+                  style={{ opacity: sectionSelected ? 1 : 0.42 }}
+                >
+                  <span className="atlas-section-badge__dot" style={{ backgroundColor: color.dot }} />
+                  <div className="atlas-section-badge__title">
+                    {sectionLayout.titleLines.map((line, lineIndex) => (
+                      <span key={`${section.id}-badge-${lineIndex}`}>{line}</span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
           <div className="glass-card atlas-canvas-hud">
             <button aria-label="Отдалить атлас" type="button" onClick={() => handleZoomStep(1 / 1.16)}>
               <Minus size={15} />
