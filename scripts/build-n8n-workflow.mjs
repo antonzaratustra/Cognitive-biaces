@@ -260,8 +260,8 @@ const workflow = {
           options: { caseSensitive: true, leftValue: "", typeValidation: "strict", version: 2 },
           conditions: [
             {
-              id: "callback-user-id-exists",
-              leftValue: "={{ !!$json.id }}",
+              id: "callback-email-exists",
+              leftValue: "={{ !!$json.email }}",
               rightValue: "",
               operator: { type: "boolean", operation: "true", singleValue: true }
             }
@@ -280,7 +280,7 @@ const workflow = {
       {
         chatId: "={{ $json.chat_id }}",
         text:
-          "=👋 {{ $json.first_name || 'Привет' }}! Курс уже можно проходить, а быстрая регистрация свяжет Telegram с сайтом, атласом и квизами.\n\nОткрой mini app, чтобы сохранить единый путь и не потерять доступ к практике.",
+          "=👋 {{ $json.first_name || 'Привет' }}! Чтобы продолжить курс, сначала заверши быструю регистрацию.\n\nНужен email, чтобы связать Telegram с сайтом, атласом и квизами в один маршрут.",
         replyMarkup: "inlineKeyboard",
         inlineKeyboard: {
           rows: [
@@ -690,7 +690,7 @@ const workflow = {
       {
         operation: "executeQuery",
         query:
-          "select\n  u.*,\n  coalesce(u.email, l.email) as email,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ String($json.last_name || '').replace(/'/g, \"''\") }}'::text as last_name,\n  '{{ String($json.tg_username || '').replace(/'/g, \"''\") }}'::text as tg_username,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key,\n  '{{ String($json.start_payload || '').replace(/'/g, \"''\") }}'::text as start_payload\nfrom (select 1) seed\nleft join public.cb_users u on u.tg_id='{{ $json.tg_id }}'::text\nleft join public.cb_leads l on l.tg_username='{{ String($json.tg_username || '').replace(/'/g, \"''\") }}' and l.tg_username is not null and l.tg_username != ''\norder by u.id nulls last, l.created_at desc\nlimit 1;",
+          "select\n  u.*,\n  l.id as lead_id,\n  l.email as lead_email,\n  coalesce(u.email, l.email) as email,\n  exists(\n    select 1\n    from public.cb_user_lessons ul\n    where ul.user_tg_id = u.tg_id\n  ) as has_lesson_queue,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ String($json.last_name || '').replace(/'/g, \"''\") }}'::text as last_name,\n  '{{ String($json.tg_username || '').replace(/'/g, \"''\") }}'::text as tg_username,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key,\n  '{{ String($json.start_payload || '').replace(/'/g, \"''\") }}'::text as start_payload\nfrom (select 1) seed\nleft join public.cb_users u on u.tg_id='{{ $json.tg_id }}'::text\nleft join public.cb_leads l on l.tg_username='{{ String($json.tg_username || '').replace(/'/g, \"''\") }}'\n  and l.email is not null\n  and l.email != ''\n  and l.tg_username is not null\n  and l.tg_username != ''\norder by u.id nulls last, l.created_at desc\nlimit 1;",
         options: {}
       },
       { typeVersion: 2.6, alwaysOutputData: true }
@@ -705,8 +705,8 @@ const workflow = {
           options: { caseSensitive: true, leftValue: "", typeValidation: "strict", version: 2 },
           conditions: [
             {
-              id: "start-user-id-exists",
-              leftValue: "={{ !!$json.id }}",
+              id: "start-email-exists",
+              leftValue: "={{ !!$json.email }}",
               rightValue: "",
               operator: { type: "boolean", operation: "true", singleValue: true }
             }
@@ -725,10 +725,47 @@ const workflow = {
       {
         operation: "executeQuery",
         query:
-          "insert into public.cb_users (tg_id, tg_username, first_name, last_name, updated_at)\nvalues (\n  '{{ $json.tg_id }}'::text,\n  {{ $json.tg_username ? \"'\" + String($json.tg_username).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  {{ $json.first_name ? \"'\" + String($json.first_name).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  {{ $json.last_name ? \"'\" + String($json.last_name).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  now()\n)\non conflict (tg_id) do update set\n  tg_username = excluded.tg_username,\n  first_name = coalesce(public.cb_users.first_name, excluded.first_name),\n  last_name = coalesce(public.cb_users.last_name, excluded.last_name),\n  updated_at = now()\nreturning\n  tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key;",
+          "with upserted as (\n  insert into public.cb_users (tg_id, tg_username, first_name, last_name, email, updated_at)\n  values (\n    '{{ $json.tg_id }}'::text,\n    {{ $json.tg_username ? \"'\" + String($json.tg_username).replace(/'/g, \"''\") + \"'\" : 'null' }},\n    {{ $json.first_name ? \"'\" + String($json.first_name).replace(/'/g, \"''\") + \"'\" : 'null' }},\n    {{ $json.last_name ? \"'\" + String($json.last_name).replace(/'/g, \"''\") + \"'\" : 'null' }},\n    {{ $json.email ? \"'\" + String($json.email).replace(/'/g, \"''\") + \"'\" : 'null' }},\n    now()\n  )\n  on conflict (tg_id) do update set\n    tg_username = excluded.tg_username,\n    first_name = coalesce(public.cb_users.first_name, excluded.first_name),\n    last_name = coalesce(public.cb_users.last_name, excluded.last_name),\n    email = coalesce(public.cb_users.email, excluded.email),\n    updated_at = now()\n  returning id, tg_id\n), bound_lead as (\n  update public.cb_leads\n  set bound_user_id = (select id from upserted),\n      tg_id = '{{ $json.tg_id }}'::text,\n      tg_username = coalesce({{ $json.tg_username ? \"'\" + String($json.tg_username).replace(/'/g, \"''\") + \"'\" : 'null' }}, public.cb_leads.tg_username)\n  where id = {{ $json.lead_id ? \"'\" + String($json.lead_id).replace(/'/g, \"''\") + \"'\" : 'null' }}::uuid\n  returning id\n)\nselect\n  (select tg_id from upserted) as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key,\n  '{{ $json.has_lesson_queue ? \"true\" : \"false\" }}'::boolean as has_lesson_queue;",
         options: {}
       },
       { typeVersion: 2.6 }
+    ),
+    node(
+      "start-has-lesson-queue",
+      "Start Has Lesson Queue?",
+      "n8n-nodes-base.if",
+      [-1264, 1520],
+      {
+        conditions: {
+          options: { caseSensitive: true, leftValue: "", typeValidation: "strict", version: 2 },
+          conditions: [
+            {
+              id: "start-has-lesson-queue",
+              leftValue: "={{ $json.has_lesson_queue === true }}",
+              rightValue: "",
+              operator: { type: "boolean", operation: "true", singleValue: true }
+            }
+          ],
+          combinator: "and"
+        },
+        options: {}
+      },
+      { typeVersion: 2.2 }
+    ),
+    node(
+      "send-start-already-registered",
+      "Send Start Already Registered",
+      "n8n-nodes-base.telegram",
+      [-1040, 1456],
+      {
+        chatId: "={{ $json.chat_id }}",
+        text:
+          "=👋 {{ $json.first_name || 'Привет' }}! Ты уже в системе.\n\nТекущий урок уже был отправлен раньше, так что можно просто продолжать с него.",
+        additionalFields: {
+          appendAttribution: false
+        }
+      },
+      { typeVersion: 1.2 }
     ),
     node(
       "send-start-greeting",
@@ -752,7 +789,7 @@ const workflow = {
       [-1488, 1408],
       {
         jsCode:
-          "return [{\n  json: {\n    ...$json,\n    course_entry_source: 'start'\n  }\n}];"
+          "const source = $node['Create Start User']?.json || {};\nreturn [{\n  json: {\n    ...source,\n    course_entry_source: 'start'\n  }\n}];"
       },
       { typeVersion: 2 }
     ),
@@ -779,8 +816,8 @@ const workflow = {
           options: { caseSensitive: true, leftValue: "", typeValidation: "strict", version: 2 },
           conditions: [
             {
-              id: "text-user-id-exists",
-              leftValue: "={{ !!$json.id }}",
+              id: "text-email-exists",
+              leftValue: "={{ !!$json.email }}",
               rightValue: "",
               operator: { type: "boolean", operation: "true", singleValue: true }
             }
@@ -839,8 +876,8 @@ const workflow = {
           options: { caseSensitive: true, leftValue: "", typeValidation: "strict", version: 2 },
           conditions: [
             {
-              id: "voice-user-id-exists",
-              leftValue: "={{ !!$json.id }}",
+              id: "voice-email-exists",
+              leftValue: "={{ !!$json.email }}",
               rightValue: "",
               operator: { type: "boolean", operation: "true", singleValue: true }
             }
@@ -1481,15 +1518,18 @@ const workflow = {
     },
     "Start Registered?": {
       main: [
-        [{ node: "Send Start Greeting", type: "main", index: 0 }],
-        [{ node: "Create Start User", type: "main", index: 0 }]
+        [{ node: "Create Start User", type: "main", index: 0 }],
+        [{ node: "Send Registration Prompt", type: "main", index: 0 }]
       ]
     },
     "Create Start User": {
-      main: [[
-        { node: "Send Registration Prompt", type: "main", index: 0 },
-        { node: "Send Start Greeting", type: "main", index: 0 }
-      ]]
+      main: [[{ node: "Start Has Lesson Queue?", type: "main", index: 0 }]]
+    },
+    "Start Has Lesson Queue?": {
+      main: [
+        [{ node: "Send Start Already Registered", type: "main", index: 0 }],
+        [{ node: "Send Start Greeting", type: "main", index: 0 }]
+      ]
     },
     "Send Start Greeting": {
       main: [[{ node: "Prepare Course Entry (Start)", type: "main", index: 0 }]]

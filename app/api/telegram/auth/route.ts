@@ -43,19 +43,15 @@ export async function POST(request: Request) {
   const supabase = getSupabaseAdmin();
 
   if (supabase) {
-    const now = new Date().toISOString();
-    const { error } = await supabase.from("cb_users").upsert(
-      {
-        tg_id: String(user.id),
+    const { error } = await supabase
+      .from("cb_users")
+      .update({
         tg_username: user.username || null,
         first_name: user.first_name || null,
         last_name: user.last_name || null,
-        updated_at: now
-      },
-      {
-        onConflict: "tg_id"
-      }
-    );
+        updated_at: new Date().toISOString()
+      })
+      .eq("tg_id", String(user.id));
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
