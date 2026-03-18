@@ -1,0 +1,2939 @@
+{
+  "name": "Cognitive Bias Atlas Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "id": "ff305256-48ef-4ab5-915c-2b82cc00b5fc",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2288,
+        784
+      ],
+      "webhookId": "89e96f60-96fc-4eed-bbb6-463f7a2f4104",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const siteUrl = 'https://cognitive-biaces.vercel.app';\nreturn [{\n  json: {\n    ...$json,\n    site_url: siteUrl,\n    miniapp_url: `${siteUrl}/miniapp/register`,\n    quiz_url: `${siteUrl}/quizzes/judgment-lab`,\n    openrouter_endpoint: 'https://openrouter.ai/api/v1/chat/completions',\n    openrouter_model: 'qwen/qwen3-coder:free',\n    openrouter_api_key: '',\n    webhook_secret: ''\n  }\n}];"
+      },
+      "id": "dca83c12-743a-40d8-aa13-7a825c406fa9",
+      "name": "Attach Config (Telegram)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2064,
+        784
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-callback",
+              "leftValue": "={{ $json.callback_query.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ec41b0ac-91dd-4d4a-a66c-9fb970698001",
+      "name": "Is Callback?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1840,
+        784
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cb = $json.callback_query || {};\nreturn [{\n  json: {\n    ...$json,\n    tg_id: String(cb.from?.id || ''),\n    chat_id: String(cb.from?.id || ''),\n    first_name: cb.from?.first_name || '',\n    message_id: String(cb.message?.message_id || ''),\n    current_message_text: cb.message?.text || cb.message?.caption || ' ',\n    callback_data: String(cb.data || '')\n  }\n}];"
+      },
+      "id": "9b49aa8d-5c0e-4319-bce3-61d570619a87",
+      "name": "Prepare Callback Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1616,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $json.callback_query.id }}",
+        "additionalFields": {}
+      },
+      "id": "7fe952be-c38a-4d62-b3d7-6affae84f9d6",
+      "name": "Answer Callback",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1392,
+        320
+      ],
+      "webhookId": "5c1fd570-c08a-4387-8ece-45d6af2d95c7",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select\n  u.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ String($json.message_id || '').replace(/'/g, \"''\") }}'::text as message_id,\n  '{{ String($json.current_message_text || '').replace(/'/g, \"''\") }}'::text as current_message_text,\n  '{{ String($json.callback_data || '').replace(/'/g, \"''\") }}'::text as callback_data,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key\nfrom (select 1) seed\nleft join public.cb_users u on u.tg_id='{{ $json.tg_id }}'\nlimit 1;",
+        "options": {}
+      },
+      "id": "185576ee-ca66-4f4e-aa15-50ffb2326d00",
+      "name": "Get Callback User",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1392,
+        512
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "JvyFSZXe7vAq72Nb",
+          "name": "Supabase TechZoro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "callback-user-id-exists",
+              "leftValue": "={{ Boolean($json.id) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e327e6f7-0553-4dc9-84d8-541c80970d84",
+      "name": "Callback Registered?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1168,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=👋 {{ $json.first_name || 'Привет' }}! Чтобы курс, атлас и квизы работали как единый путь, сначала заверши быструю регистрацию.\n\nОна привяжет твой Telegram к сайту и откроет правильный сценарий внутри бота.",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Открыть регистрацию",
+                    "additionalFields": {
+                      "web_app": {
+                        "url": "={{ $json.miniapp_url }}"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "38326e0b-9c5f-4a58-8951-fcc94bfbe7fa",
+      "name": "Send Registration Prompt",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -272,
+        832
+      ],
+      "webhookId": "3e978562-6d08-49bc-89ac-671176f353ce",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = String($json.callback_data || '').trim();\nconst out = {\n  ...$json,\n  route: 'unknown',\n  lesson_id: '',\n  question_text: ''\n};\nlet match;\nif ((match = raw.match(/^lesson:next:(.+)$/))) {\n  out.route = 'next';\n  out.lesson_id = match[1];\n} else if ((match = raw.match(/^lesson:save:(.+)$/))) {\n  out.route = 'save';\n  out.lesson_id = match[1];\n} else if ((match = raw.match(/^lesson:ai:(.+)$/))) {\n  out.route = 'ai_open';\n  out.lesson_id = match[1];\n} else if ((match = raw.match(/^ai:suggest:(.+):(life|spot|practice)$/))) {\n  out.route = 'ai_suggest';\n  out.lesson_id = match[1];\n  out.question_text = match[2] === 'life'\n    ? 'Как это искажение проявляется в обычной жизни?'\n    : match[2] === 'spot'\n      ? 'Как замечать это искажение у себя в моменте?'\n      : 'Что делать на практике, чтобы не попадать в эту ловушку?';\n}\nreturn [{ json: out }];"
+      },
+      "id": "3ecb29fd-6a16-4586-b757-47d7c5f5f87a",
+      "name": "Normalize Callback Route",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -944,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "callback-next",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "next",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "next"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "callback-save",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "save",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "save"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "callback-ai-open",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "ai_open",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ai_open"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "callback-ai-suggest",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "ai_suggest",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ai_suggest"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "85e6c63a-b4dc-4bfe-898e-4c2446a66b2d",
+      "name": "Callback Route",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -720,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "editMessageText",
+        "chatId": "={{ $json.chat_id }}",
+        "messageId": "={{ $json.message_id }}",
+        "text": "={{ $json.current_message_text || ' ' }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "9fc1068a-95f5-4452-bd06-412ae44033ae",
+      "name": "Freeze Lesson Card",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -496,
+        64
+      ],
+      "webhookId": "d0eecafc-dff4-41f3-b5a7-a200469e9a7d",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update public.cb_user_lessons\nset status = 'completed',\n    completed_at = now()\nwhere user_tg_id = '{{ $node[\"Normalize Callback Route\"].json.tg_id }}'\n  and lesson_id = '{{ $node[\"Normalize Callback Route\"].json.lesson_id }}';",
+        "options": {}
+      },
+      "id": "e999dba3-b0d6-41f2-847c-bd90fc6cd3f4",
+      "name": "Complete Lesson",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -272,
+        64
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "JvyFSZXe7vAq72Nb",
+          "name": "Supabase TechZoro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $node['Normalize Callback Route']?.json || {};\nreturn [{\n  json: {\n    ...source,\n    course_entry_source: 'next_lesson'\n  }\n}];"
+      },
+      "id": "7b8997ce-c2f3-4ce4-9910-3c488738690d",
+      "name": "Prepare Course Entry (Callback)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into public.cb_saved_lessons (user_tg_id, lesson_id)\nvalues ('{{ $json.tg_id }}', '{{ $json.lesson_id }}')\non conflict (user_tg_id, lesson_id) do nothing;",
+        "options": {}
+      },
+      "id": "12e8b957-c8b8-45df-b0bd-69618df2cd64",
+      "name": "Save Lesson",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -496,
+        256
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "JvyFSZXe7vAq72Nb",
+          "name": "Supabase TechZoro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node['Normalize Callback Route'].json.chat_id }}",
+        "text": "=📌 Сохранил урок. К нему можно будет вернуться позже и быстро освежить ключевую мысль.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "dda4a341-9c5d-4956-88c5-233c38391023",
+      "name": "Send Saved Confirmation",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -272,
+        256
+      ],
+      "webhookId": "7fe98847-6438-4e01-bd01-64aeeadb2c6b",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select\n  l.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.message_id || '').replace(/'/g, \"''\") }}'::text as message_id,\n  '{{ String($json.current_message_text || '').replace(/'/g, \"''\") }}'::text as current_message_text,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key\nfrom public.cb_lessons l\nwhere l.id = '{{ $json.lesson_id }}'\nlimit 1;",
+        "options": {}
+      },
+      "id": "02c566d8-3d8c-481a-b1cc-b03639bc88ac",
+      "name": "Get Lesson For AI",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -496,
+        448
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "JvyFSZXe7vAq72Nb",
+          "name": "Supabase TechZoro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=🧠 <b>{{ $json.title }}</b>\n\nВыбери готовый вопрос или просто напиши свой следующим сообщением. Можно и голосом.",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Как это проявляется в жизни?",
+                    "additionalFields": {
+                      "callback_data": "=ai:suggest:{{ $json.id }}:life"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Как замечать это у себя?",
+                    "additionalFields": {
+                      "callback_data": "=ai:suggest:{{ $json.id }}:spot"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Что делать на практике?",
+                    "additionalFields": {
+                      "callback_data": "=ai:suggest:{{ $json.id }}:practice"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "90ac0b51-d79b-4f17-b48a-9ef84504a802",
+      "name": "Send AI Suggestions",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -272,
+        448
+      ],
+      "webhookId": "8554333c-09ff-40b0-9646-5bba6e25feb5",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "editMessageText",
+        "chatId": "={{ $json.chat_id }}",
+        "messageId": "={{ $json.message_id }}",
+        "text": "={{ $json.current_message_text || ' ' }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "28a6ada6-0208-4261-b5d2-dee36f1363b5",
+      "name": "Hide AI Prompt Buttons",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -496,
+        640
+      ],
+      "webhookId": "ac4be0b7-18ed-4b4f-a8ec-1b9efb435b78",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node['Normalize Callback Route'].json.chat_id }}",
+        "text": "Надо подумать, сейчас отвечу...",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "8f09680a-c51b-4317-be10-fa0e35b33770",
+      "name": "Send Thinking (Callback)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -272,
+        640
+      ],
+      "webhookId": "c3dbc0c8-c117-4bc5-b1ae-8c1b947ab8f9",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $node['Normalize Callback Route']?.json || {};\nreturn [{\n  json: {\n    ...source,\n    message_type: 'text',\n    question_text: String(source.question_text || '').trim()\n  }\n}];"
+      },
+      "id": "c3986b78-6d67-44c4-8f53-f8df995a91cb",
+      "name": "Prepare AI Suggest Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $json.message || {};\nconst text = String(message.text || message.caption || '').trim();\nconst entities = message.entities || [];\nconst isCommand = entities.some((entity) => entity.type === 'bot_command');\nconst startMatch = text.match(/^\\/start(?:\\s+(.+))?$/);\nconst route = message.voice ? 'voice' : (isCommand ? 'command' : (text ? 'text' : 'ignore'));\nreturn [{\n  json: {\n    ...$json,\n    tg_id: String(message.chat?.id || ''),\n    chat_id: String(message.chat?.id || ''),\n    first_name: message.from?.first_name || '',\n    last_name: message.from?.last_name || '',\n    tg_username: message.from?.username || '',\n    message_text: text,\n    route,\n    start_payload: startMatch?.[1] || '',\n    is_start: Boolean(startMatch)\n  }\n}];"
+      },
+      "id": "d5dc9af0-5819-4340-a5e0-c00c17771717",
+      "name": "Prepare Message Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1616,
+        1520
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "route-command",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "command",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "command"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "route-text",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "route-voice",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "voice",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "voice"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b7d60e33-cc0c-4911-afba-f799a01586e3",
+      "name": "Message Route",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -1392,
+        1504
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "is-start-command-condition",
+              "leftValue": "={{ $json.is_start }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "31164390-0ff2-4c74-a5b7-2bedfbb00211",
+      "name": "Is /start?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1168,
+        1232
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=Сейчас бот понимает /start и вопросы по текущему уроку. Начни с /start, и я соберу для тебя маршрут по курсу.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "82c54256-d2c9-4b37-acfb-5bc02577e152",
+      "name": "Send Unknown Command",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -944,
+        1472
+      ],
+      "webhookId": "1685bc44-9299-43fa-944b-dc10efe589fd",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select\n  u.*,\n  coalesce(u.email, l.email) as email,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ String($json.last_name || '').replace(/'/g, \"''\") }}'::text as last_name,\n  '{{ String($json.tg_username || '').replace(/'/g, \"''\") }}'::text as tg_username,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key,\n  '{{ String($json.start_payload || '').replace(/'/g, \"''\") }}'::text as start_payload\nfrom (select 1) seed\nleft join public.cb_users u on u.tg_id='{{ $json.tg_id }}'\nleft join public.cb_leads l on l.tg_username='{{ String($json.tg_username || '').replace(/'/g, \"''\") }}' and l.tg_username is not null and l.tg_username != ''\norder by u.id nulls last, l.created_at desc\nlimit 1;",
+        "options": {}
+      },
+      "id": "6d934766-3e34-4037-96cb-722f1ff1c37c",
+      "name": "Get Start User",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -944,
+        1184
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "JvyFSZXe7vAq72Nb",
+          "name": "Supabase TechZoro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "start-user-id-exists",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "58b241a4-18d5-46ba-b7a3-464ff68861b9",
+      "name": "Start Registered?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -720,
+        1184
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into public.cb_users (tg_id, tg_username, first_name, last_name, updated_at)\nvalues (\n  '{{ $json.tg_id }}',\n  {{ $json.tg_username ? \"'\" + String($json.tg_username).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  {{ $json.first_name ? \"'\" + String($json.first_name).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  {{ $json.last_name ? \"'\" + String($json.last_name).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  now()\n)\non conflict (tg_id) do update set\n  tg_username = excluded.tg_username,\n  first_name = coalesce(public.cb_users.first_name, excluded.first_name),\n  last_name = coalesce(public.cb_users.last_name, excluded.last_name),\n  updated_at = now()\nreturning\n  tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key;",
+        "options": {}
+      },
+      "id": "59ddd208-093f-4b07-b43a-873a007bdecc",
+      "name": "Create Start User",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -496,
+        1352
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "JvyFSZXe7vAq72Nb",
+          "name": "Supabase TechZoro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=👋 {{ $json.first_name || 'Привет' }}! Добро пожаловать в курс по когнитивным искажениям.\n\nТы уже в системе. Продолжаем погружение в когнитивные искажения.\n\nНиже — твой текущий шаг в курсе. Карта, примеры и AI-подсказки всегда под рукой.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "3f668ec5-72c5-41b3-b784-21b6e6da19ff",
+      "name": "Send Start Greeting",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -496,
+        968
+      ],
+      "webhookId": "52f1c832-6809-430f-a091-88eece9075f6",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$json,\n    course_entry_source: 'start'\n  }\n}];"
+      },
+      "id": "6fecd647-cc38-4054-8398-c380656ac90d",
+      "name": "Prepare Course Entry (Start)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -496,
+        1168
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select\n  u.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ String($json.message_text || '').replace(/'/g, \"''\") }}'::text as message_text,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key\nfrom (select 1) seed\nleft join public.cb_users u on u.tg_id='{{ $json.tg_id }}'\nlimit 1;",
+        "options": {}
+      },
+      "id": "33ce1a10-09a4-4288-8d76-2b24004d7b3a",
+      "name": "Get Text User",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -720,
+        1616
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "JvyFSZXe7vAq72Nb",
+          "name": "Supabase TechZoro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "text-user-id-exists",
+              "leftValue": "={{ Boolean($json.id) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "05226b93-c85d-4162-944c-2b6e1300b1e5",
+      "name": "Text Registered?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -496,
+        1616
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node['Get Text User'].json.chat_id }}",
+        "text": "Надо подумать, сейчас отвечу...",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "8d7f8a39-7176-4863-8aea-acc94581550a",
+      "name": "Send Thinking (Message)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -272,
+        1664
+      ],
+      "webhookId": "49c02482-59c2-4f82-a653-f3f4f520a99b",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $node['Get Text User']?.json || {};\nreturn [{\n  json: {\n    ...source,\n    lesson_id: '',\n    message_type: 'text',\n    question_text: String(source.message_text || '').trim()\n  }\n}];"
+      },
+      "id": "dbc4f4ca-857d-41c3-bb2a-af8e553f7882",
+      "name": "Prepare AI Text Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        1664
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select\n  u.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key\nfrom (select 1) seed\nleft join public.cb_users u on u.tg_id='{{ $json.tg_id }}'\nlimit 1;",
+        "options": {}
+      },
+      "id": "4316e564-2f7a-4d95-bc27-dbbc7c7db34c",
+      "name": "Get Voice User",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1168,
+        1856
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "JvyFSZXe7vAq72Nb",
+          "name": "Supabase TechZoro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "voice-user-id-exists",
+              "leftValue": "={{ Boolean($json.id) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "448d9c71-362d-493f-bcc9-7fa545ea77f3",
+      "name": "Voice Registered?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -944,
+        1856
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node['Get Voice User'].json.chat_id }}",
+        "text": "Слушаю голосовой вопрос, сейчас разберу его в контексте урока...",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "67c14d49-291b-4e0b-abe4-bbd6b83b808d",
+      "name": "Send Thinking (Voice)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -720,
+        1928
+      ],
+      "webhookId": "ab314d04-1378-4d30-bc91-de96fb0bec9d",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $node[\"Telegram Trigger\"].json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "id": "68353e53-8029-4439-8c44-8dfbdd2ead1e",
+      "name": "Get Voice File",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -496,
+        1928
+      ],
+      "webhookId": "7bf0fea0-db0e-413b-896d-01c0199cf20b",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "id": "34cb171f-e0a8-4485-9518-2f8c628e7762",
+      "name": "Transcribe Voice",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -272,
+        1928
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$node['Get Voice User'].json,\n    lesson_id: '',\n    message_type: 'voice',\n    question_text: String($json.text || '').trim()\n  }\n}];"
+      },
+      "id": "96bf2676-0716-4f0a-9b8c-54aefad31f3f",
+      "name": "Prepare AI Voice Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        1928
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with ins as (\n  insert into public.cb_user_lessons (user_tg_id, lesson_id, status)\n  select '{{ $json.tg_id }}', l.id, 'new'\n  from public.cb_lessons l\n  where coalesce(l.published_at, now()) <= now()\n  on conflict (user_tg_id, lesson_id) do nothing\n  returning lesson_id\n)\nselect\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key,\n  count(*)::int as inserted_count\nfrom ins;",
+        "options": {}
+      },
+      "id": "935f1c22-f4ee-48f5-95d5-94025f401d76",
+      "name": "Ensure Lesson Queue",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        176,
+        1232
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "JvyFSZXe7vAq72Nb",
+          "name": "Supabase TechZoro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with target as (\n  select ul.id\n  from public.cb_user_lessons ul\n  join public.cb_lessons l on l.id = ul.lesson_id\n  where ul.user_tg_id = '{{ $json.tg_id }}'\n    and ul.status in ('new', 'in_progress')\n  order by case when ul.status = 'in_progress' then 0 else 1 end, l.sort_order asc\n  limit 1\n)\nupdate public.cb_user_lessons ul\nset status = 'in_progress',\n    last_opened_at = now()\nwhere ul.id in (select id from target)\nreturning ul.lesson_id,\n          '{{ $json.tg_id }}'::text as tg_id,\n          '{{ $json.chat_id }}'::text as chat_id,\n          '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n          '{{ $json.site_url }}'::text as site_url,\n          '{{ $json.quiz_url }}'::text as quiz_url,\n          '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n          '{{ $json.openrouter_model }}'::text as openrouter_model,\n          '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key;",
+        "options": {}
+      },
+      "id": "593875ac-aa8f-42c3-9b47-b70d1e6d9018",
+      "name": "Activate Current Lesson",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        1232
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "JvyFSZXe7vAq72Nb",
+          "name": "Supabase TechZoro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select\n  l.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key\nfrom public.cb_user_lessons ul\njoin public.cb_lessons l on l.id = ul.lesson_id\nwhere ul.user_tg_id = '{{ $json.tg_id }}'\n  and ul.status = 'in_progress'\norder by l.sort_order asc\nlimit 1;",
+        "options": {}
+      },
+      "id": "f5e966de-1825-47f9-a0b4-6ff62828dbba",
+      "name": "Get Current Lesson",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        624,
+        1232
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "JvyFSZXe7vAq72Nb",
+          "name": "Supabase TechZoro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "current-lesson-exists",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d62454df-3a9d-48c1-ad71-f620bef7018e",
+      "name": "Has Current Lesson?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        848,
+        1232
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = (value) => String(value ?? '').replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));\nconst lesson = $json;\nconst parts = [`<b>${esc(lesson.title || 'Урок')}</b>`];\nif (lesson.short_text) parts.push(esc(lesson.short_text));\nif (lesson.full_text) parts.push(esc(lesson.full_text));\nconst atlasUrl = `${lesson.site_url || 'https://cognitive-biaces.vercel.app'}?focus=${lesson.slug}#atlas`;\nreturn [{\n  json: {\n    ...lesson,\n    atlas_url: atlasUrl,\n    lesson_text: parts.join('\\n\\n')\n  }\n}];"
+      },
+      "id": "21f882b1-312f-41dd-b1ba-52c7f2298de9",
+      "name": "Build Lesson Card",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1072,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "lesson-image-exists",
+              "leftValue": "={{ Boolean($json.image_url) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "74174be9-7fc4-4630-a9a5-b1a24ba4094d",
+      "name": "Has Lesson Image?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1360,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $json.chat_id }}",
+        "file": "={{ $json.image_url }}",
+        "additionalFields": {}
+      },
+      "id": "bce8feed-e3da-402b-b03f-a4cf3557e252",
+      "name": "Send Lesson Photo",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1648,
+        1064
+      ],
+      "webhookId": "7bb1cec6-2db3-42ad-a513-e3d0e4166b55",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node['Build Lesson Card'].json.chat_id }}",
+        "text": "={{ $node['Build Lesson Card'].json.lesson_text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Следующий",
+                    "additionalFields": {
+                      "callback_data": "=lesson:next:{{ $node['Build Lesson Card'].json.id }}"
+                    }
+                  },
+                  {
+                    "text": "Атлас",
+                    "additionalFields": {
+                      "url": "={{ $node['Build Lesson Card'].json.atlas_url }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Сохранить",
+                    "additionalFields": {
+                      "callback_data": "=lesson:save:{{ $node['Build Lesson Card'].json.id }}"
+                    }
+                  },
+                  {
+                    "text": "Спросить AI",
+                    "additionalFields": {
+                      "callback_data": "=lesson:ai:{{ $node['Build Lesson Card'].json.id }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "92a6592d-0be8-4ed7-b9ea-028c7839d959",
+      "name": "Send Lesson Card",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1872,
+        1136
+      ],
+      "webhookId": "b9ebba70-4b8d-4c53-9c89-9cf63ed03fd5",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Ensure Lesson Queue').item.json.chat_id }}",
+        "text": "=🎉 Ты дошел до конца текущего набора уроков.\n\nДальше можно закрепить материал на сайте: открыть квиз, пройти практику и вернуться к сохраненным искажениям.",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Открыть квиз",
+                    "additionalFields": {
+                      "url": "={{ $('Ensure Lesson Queue').item.json.quiz_url }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "18ee1778-6a03-4096-a500-dec691bb5ec8",
+      "name": "Send Course Complete",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1072,
+        1376
+      ],
+      "webhookId": "20078860-265a-4b24-8eea-3fe3f94a499c",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select\n  l.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.question_text || '').replace(/'/g, \"''\") }}'::text as question_text,\n  '{{ String($json.message_type || 'text').replace(/'/g, \"''\") }}'::text as message_type,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key\nfrom public.cb_lessons l\nwhere l.id = coalesce(\n  {{ $json.lesson_id ? \"'\" + String($json.lesson_id).replace(/'/g, \"''\") + \"'\" : 'null' }}::text,\n  (\n    select ul.lesson_id\n    from public.cb_user_lessons ul\n    join public.cb_lessons cl on cl.id = ul.lesson_id\n    where ul.user_tg_id = '{{ $json.tg_id }}'\n      and ul.status = 'in_progress'\n    order by cl.sort_order asc\n    limit 1\n  ),\n  (\n    select ul.lesson_id\n    from public.cb_user_lessons ul\n    join public.cb_lessons cl on cl.id = ul.lesson_id\n    where ul.user_tg_id = '{{ $json.tg_id }}'\n      and ul.status = 'completed'\n    order by ul.completed_at desc nulls last, cl.sort_order asc\n    limit 1\n  )\n)\nlimit 1;",
+        "options": {}
+      },
+      "id": "6795bd97-6eb1-4f49-83f2-80dabc8c2ad7",
+      "name": "Resolve AI Lesson",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        176,
+        1736
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "JvyFSZXe7vAq72Nb",
+          "name": "Supabase TechZoro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ai-lesson-exists",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "47058d1a-09d6-488c-853e-acc9170157c4",
+      "name": "Has AI Lesson?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        400,
+        1736
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=Сначала открой урок через /start, чтобы у AI появился контекст. После этого можно спрашивать сколько угодно.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "663870a4-7842-4111-b861-24a79dc978ac",
+      "name": "Send No Lesson Yet",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        1832
+      ],
+      "webhookId": "69a4571f-6efb-42ef-bfda-b4ea885e85ae",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into public.cb_ai_threads (user_tg_id, lesson_id, status, last_message_at)\nvalues ('{{ $json.tg_id }}', '{{ $json.id }}', 'active', now())\non conflict (user_tg_id, lesson_id)\ndo update set status = 'active', last_message_at = now()\nreturning id as thread_id,\n          '{{ $json.tg_id }}'::text as tg_id,\n          '{{ $json.chat_id }}'::text as chat_id,\n          '{{ $json.id }}'::text as lesson_id;",
+        "options": {}
+      },
+      "id": "42f9fcd0-7b82-4fcf-a043-d2802f632ba0",
+      "name": "Ensure AI Thread",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        624,
+        1640
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "JvyFSZXe7vAq72Nb",
+          "name": "Supabase TechZoro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select role, message_text\nfrom public.cb_ai_messages\nwhere thread_id = '{{ $json.thread_id }}'\norder by created_at desc\nlimit 6;",
+        "options": {}
+      },
+      "id": "896fa440-e642-407a-9a34-9ae60de3b390",
+      "name": "Get AI History",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        848,
+        1640
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "JvyFSZXe7vAq72Nb",
+          "name": "Supabase TechZoro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function safe(name) {\n  try {\n    return $node[name].json || null;\n  } catch (error) {\n    return null;\n  }\n}\nconst lesson = safe('Resolve AI Lesson') || {};\nconst thread = safe('Ensure AI Thread') || {};\nconst callbackInput = safe('Prepare AI Suggest Input');\nconst textInput = safe('Prepare AI Text Input');\nconst voiceInput = safe('Prepare AI Voice Input');\nconst source = callbackInput?.question_text ? callbackInput : (voiceInput?.question_text ? voiceInput : textInput || {});\nconst history = $items('Get AI History', 0).map((item) => item.json).filter((item) => item.message_text).reverse().map((item) => ({ role: item.role, content: item.message_text }));\nconst questionText = String(source.question_text || lesson.question_text || '').trim();\nconst firstName = source.first_name || lesson.first_name || 'друг';\nconst related = Array.isArray(lesson.related_slugs) ? lesson.related_slugs.join(', ') : String(lesson.related_slugs || '');\nconst systemPrompt = [\n  'Ты — практичный помощник курса по когнитивным искажениям.',\n  `Обращайся к пользователю по имени: ${firstName}.`,\n  `Текущий урок: ${lesson.title || ''}`,\n  lesson.short_text || '',\n  lesson.ai_context || '',\n  related ? `Связанные искажения: ${related}` : '',\n  'Отвечай по-русски, коротко, ясно и прикладно.',\n  'Опирайся на контекст урока, не выдумывай лишние факты.',\n  'Если полезно, дай 2-4 конкретных шага или вопроса для самопроверки.',\n  'Для Telegram используй только HTML-теги <b>, без markdown.'\n].filter(Boolean).join('\\n\\n');\nreturn [{\n  json: {\n    chat_id: lesson.chat_id || thread.chat_id || source.chat_id,\n    lesson_id: lesson.id || thread.lesson_id || source.lesson_id,\n    message_type: source.message_type || 'text',\n    openrouter_endpoint: lesson.openrouter_endpoint || source.openrouter_endpoint || 'https://openrouter.ai/api/v1/chat/completions',\n    openrouter_api_key: lesson.openrouter_api_key || source.openrouter_api_key || '',\n    provider: 'openrouter',\n    question_text: questionText,\n    request_body: {\n      model: lesson.openrouter_model || source.openrouter_model || 'qwen/qwen3-coder:free',\n      messages: [\n        { role: 'system', content: systemPrompt },\n        ...history,\n        { role: 'user', content: questionText || 'Помоги понять текущее искажение.' }\n      ]\n    },\n    site_url: lesson.site_url || source.site_url || 'https://cognitive-biaces.vercel.app',\n    tg_id: lesson.tg_id || thread.tg_id || source.tg_id,\n    thread_id: thread.thread_id,\n    system_prompt: systemPrompt\n  }\n}];"
+      },
+      "id": "1c68790e-1632-46d3-bfd7-7bc086dd5c53",
+      "name": "Build AI Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1072,
+        1640
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.question_text }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "={{ $json.system_prompt }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "id": "07a11f46-815e-4590-acaf-3042420ad5da",
+      "name": "Basic LLM Chain",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1296,
+        1640
+      ]
+    },
+    {
+      "parameters": {
+        "model": "qwen/qwen-2.5-7b-instruct",
+        "options": {}
+      },
+      "id": "988086e8-afaa-41ba-b13c-2a40d3ade5dd",
+      "name": "OpenRouter Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1368,
+        1864
+      ],
+      "credentials": {
+        "openRouterApi": {
+          "id": "KNApm2wQRqprru2X",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $node['Build AI Prompt']?.json || {};\nconst answer = $json.text || $json.output || $json.response?.choices?.[0]?.message?.content || $json.answer_text || 'AI не вернул текстовый ответ.';\nreturn [{\n  json: {\n    ...source,\n    answer_text: String(answer).trim(),\n    model: $json.model || source.request_body?.model || 'unknown',\n    input_tokens: $json.response?.usage?.prompt_tokens || null,\n    output_tokens: $json.response?.usage?.completion_tokens || null,\n    status: $json.status || 'ok'\n  }\n}];"
+      },
+      "id": "3a61f88c-e09f-4d14-a781-7ed01647a8c3",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1648,
+        1640
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into public.cb_ai_messages (thread_id, role, message_text, message_type, provider, model)\nvalues (\n  '{{ $node[\"Parse AI Response\"].json.thread_id }}',\n  'user',\n  '{{ String($node[\"Parse AI Response\"].json.question_text || '').replace(/'/g, \"''\") }}',\n  '{{ String($node[\"Parse AI Response\"].json.message_type || 'text').replace(/'/g, \"''\") }}',\n  'telegram',\n  'input'\n);",
+        "options": {}
+      },
+      "id": "8f0057b9-1d76-41d4-91ad-ed0b7722b567",
+      "name": "Store AI User Message",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1872,
+        1640
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "JvyFSZXe7vAq72Nb",
+          "name": "Supabase TechZoro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into public.cb_ai_messages (thread_id, role, message_text, message_type, provider, model)\nvalues (\n  '{{ $node[\"Parse AI Response\"].json.thread_id }}',\n  'assistant',\n  '{{ String($node[\"Parse AI Response\"].json.answer_text || '').replace(/'/g, \"''\") }}',\n  'text',\n  'openrouter',\n  '{{ String($node[\"Parse AI Response\"].json.model || '').replace(/'/g, \"''\") }}'\n);\n\ninsert into public.cb_ai_usage (user_tg_id, lesson_id, provider, model, input_tokens, output_tokens, status)\nvalues (\n  '{{ $node[\"Parse AI Response\"].json.tg_id }}',\n  '{{ $node[\"Parse AI Response\"].json.lesson_id }}',\n  'openrouter',\n  '{{ String($node[\"Parse AI Response\"].json.model || '').replace(/'/g, \"''\") }}',\n  {{ $node[\"Parse AI Response\"].json.input_tokens || 'null' }},\n  {{ $node[\"Parse AI Response\"].json.output_tokens || 'null' }},\n  '{{ String($node[\"Parse AI Response\"].json.status || 'ok').replace(/'/g, \"''\") }}'\n);",
+        "options": {}
+      },
+      "id": "3a7f9e9d-882d-4761-9b6b-44ce03e1e3f6",
+      "name": "Store AI Assistant Message",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2096,
+        1640
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "JvyFSZXe7vAq72Nb",
+          "name": "Supabase TechZoro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $node['Parse AI Response']?.json || {};\nlet text = source.answer_text ?? source.text ?? '';\nif (typeof text !== 'string') text = String(text);\ntext = text.replace(/^###\\s*(.+)$/gm, '<b>$1</b>');\ntext = text.replace(/\\*\\*(.+?)\\*\\*/gs, '<b>$1</b>');\ntext = text.replace(/__(.+?)__/gs, '<b>$1</b>');\ntext = text.replace(/\\*(.+?)\\*/gs, '$1');\ntext = text.replace(/_(.+?)_/gs, '$1');\ntext = text.replace(/```+/g, '').replace(/`+/g, '');\ntext = text.replace(/\\\\n/g, '\\n');\ntext = text.replace(/<script[\\s\\S]*?<\\/script>/gi, '');\ntext = text.replace(/\\son\\w+=\"[^\"]*\"/gi, '');\ntext = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nfor (const tag of ['b','i','u','s','code','pre','a','tg-spoiler']) {\n  const open = new RegExp(`&lt;${tag}(\\\\s+[^&]*?)?&gt;`, 'gi');\n  const close = new RegExp(`&lt;\\\\/${tag}\\\\s*&gt;`, 'gi');\n  text = text.replace(open, (_m, attrs='') => `<${tag}${attrs}>`).replace(close, `</${tag}>`);\n}\nreturn [{ json: { ...source, answer_text: text } }];"
+      },
+      "id": "5cd85f6e-cc8a-4e93-8eb5-4893fd882b44",
+      "name": "Sanitize for Telegram HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        1640
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$json,\n    chat_id: $json.chat_id,\n    lesson_id: $json.lesson_id,\n    message: $json.answer_text,\n    session_key: `${$json.chat_id || $json.tg_id || ''}_lesson_${$json.lesson_id || ''}`\n  }\n}];"
+      },
+      "id": "9f302c0f-bb74-4f7f-a335-7b42b84c295d",
+      "name": "Carry AI Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2544,
+        1640
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const MAX_LEN = 3500;\nconst input = items?.[0]?.json || {};\nconst raw = input.message || input.answer_text || '';\nconst chat_id = input.chat_id || input.tg_id || null;\nconst lesson_id = input.lesson_id || null;\nconst text = typeof raw === 'string' ? raw : String(raw);\nif (!text) return [];\nconst tokens = text.match(/<\\/?[a-zA-Z][^>]*>|[^<]+/g) || [];\nconst chunks = [];\nlet buffer = '';\nfor (const token of tokens) {\n  if ((buffer + token).length > MAX_LEN && buffer) {\n    chunks.push(buffer);\n    buffer = token;\n  } else {\n    buffer += token;\n  }\n}\nif (buffer) chunks.push(buffer);\nreturn chunks.map((message, index) => ({ json: { message, chat_id, lesson_id, is_last: index === chunks.length - 1 } }));"
+      },
+      "id": "cca3e6bf-dbc3-4229-bd96-3d6759a3bfe1",
+      "name": "Chunk for Telegram HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2768,
+        1640
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "4d08823e-d91f-494a-927a-e3d2132bc002",
+      "name": "Loop Over Chunks",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        2992,
+        1640
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "chunk-is-last",
+              "leftValue": "={{ $json.is_last === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7d0110b1-804b-4f63-9ef6-c664c93e8967",
+      "name": "Is Last AI Chunk?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3216,
+        1472
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "6ec2ea24-1d6d-4d9b-9e39-0da58075b280",
+      "name": "Send AI Chunk",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3440,
+        1736
+      ],
+      "webhookId": "b40c72f8-1ea1-4dc2-b87a-288a970157b4",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.message }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Следующий урок",
+                    "additionalFields": {
+                      "callback_data": "=lesson:next:{{ $json.lesson_id }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "15715e12-3487-45ad-b3ff-bbe6e48f1e57",
+      "name": "Send AI Final Chunk",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3440,
+        1544
+      ],
+      "webhookId": "3e9a4f96-7734-4d71-ae6b-d80aa4affda8",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cb-miniapp-register",
+        "options": {}
+      },
+      "id": "d11b60bf-a005-418a-8edf-820321296f77",
+      "name": "Miniapp Registration Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1824,
+        2240
+      ],
+      "webhookId": "591a322f-8012-49a5-8127-3d0a06460c0f"
+    },
+    {
+      "parameters": {
+        "jsCode": "const siteUrl = 'https://cognitive-biaces.vercel.app';\nconst body = $json.body || {};\nconst expected = '';\nreturn [{\n  json: {\n    ...body,\n    secret_ok: !expected || body.secret === expected,\n    tg_id: String(body.tg_id || ''),\n    chat_id: String(body.tg_id || ''),\n    first_name: body.firstName || '',\n    last_name: body.lastName || '',\n    tg_username: body.tgUsername || '',\n    email: body.email || '',\n    site_url: siteUrl,\n    miniapp_url: `${siteUrl}/miniapp/register`,\n    quiz_url: `${siteUrl}/quizzes/judgment-lab`,\n    openrouter_endpoint: 'https://openrouter.ai/api/v1/chat/completions',\n    openrouter_model: 'qwen/qwen3-coder:free',\n    openrouter_api_key: '',\n    webhook_secret: expected\n  }\n}];"
+      },
+      "id": "89453602-19ca-4265-ab85-a6d0eaef6f8d",
+      "name": "Attach Config (Webhook)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1600,
+        2240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "webhook-secret-ok",
+              "leftValue": "={{ $json.secret_ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cc8e71df-4c07-488f-b194-68d3b1dd973a",
+      "name": "Webhook Secret Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1376,
+        2240
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "fcc4b427-147b-422d-8bbb-c4586b2c43c8",
+      "name": "Webhook Invalid",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -1152,
+        2352
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=✨ Регистрация завершена.\n\nТеперь курс, атлас и практика связаны с твоим Telegram. Ниже отправляю первый урок, с которого удобно начать.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "69efb278-f7aa-489b-87ea-8bf4f86525d2",
+      "name": "Send Registration Complete",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1152,
+        2160
+      ],
+      "webhookId": "2f7a16ab-846c-4d40-9cbf-6272579eede4",
+      "credentials": {
+        "telegramApi": {
+          "id": "slF7YmRIGkOdpUSK",
+          "name": "TechZoro Cognitive biases Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $node['Attach Config (Webhook)']?.json || {};\nreturn [{\n  json: {\n    ...source,\n    course_entry_source: 'registration_webhook'\n  }\n}];"
+      },
+      "id": "4b3ecc4c-2a1a-4793-b00c-b360dfc002fe",
+      "name": "Prepare Course Entry (Webhook)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -928,
+        2160
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select\n  u.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ String($json.last_name || '').replace(/'/g, \"''\") }}'::text as last_name,\n  '{{ String($json.tg_username || '').replace(/'/g, \"''\") }}'::text as tg_username,\n  '{{ $json.email }}'::text as email,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key\nfrom (select 1) seed\nleft join public.cb_users u on u.tg_id='{{ $json.tg_id }}'\nlimit 1;",
+        "options": {}
+      },
+      "id": "1f27d0b9-f3f7-4503-81bb-8451944e1b65",
+      "name": "Get Webhook User",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -704,
+        2160
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "JvyFSZXe7vAq72Nb",
+          "name": "Supabase TechZoro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "webhook-user-id-exists",
+              "leftValue": "={{ Boolean($json.id) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f98287f4-c29d-42c8-9045-383e73e6ead6",
+      "name": "Webhook User Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -480,
+        2160
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into public.cb_users (tg_id, tg_username, first_name, last_name, email, updated_at)\nvalues (\n  '{{ $json.tg_id }}',\n  {{ $json.tg_username ? \"'\" + String($json.tg_username).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  {{ $json.first_name ? \"'\" + String($json.first_name).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  {{ $json.last_name ? \"'\" + String($json.last_name).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  {{ $json.email ? \"'\" + String($json.email).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  now()\n)\non conflict (tg_id) do update set\n  tg_username = excluded.tg_username,\n  first_name = coalesce(public.cb_users.first_name, excluded.first_name),\n  last_name = coalesce(public.cb_users.last_name, excluded.last_name),\n  email = coalesce(public.cb_users.email, excluded.email),\n  updated_at = now()\nreturning\n  tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key;",
+        "options": {}
+      },
+      "id": "3f235e67-e8c4-4fc1-b497-ebce299781a4",
+      "name": "Create Webhook User",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -256,
+        2240
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "JvyFSZXe7vAq72Nb",
+          "name": "Supabase TechZoro"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$json,\n    course_entry_source: 'registration_webhook'\n  }\n}];"
+      },
+      "id": "9a14e96e-ce8a-4d92-9f44-c6fd7c62765b",
+      "name": "Prepare Course Entry (Webhook User)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        2160
+      ]
+    },
+    {
+      "parameters": {
+        "content": "После импорта:\n1. Назначь credentials на Telegram Trigger, Telegram, Postgres и Transcribe Voice.\n2. Открой node \"Attach Config (Telegram)\" и проверь URL сайта.\n3. В контейнер n8n должны быть переданы OPENROUTER_API_KEY, OPENROUTER_MODEL и N8N_WEBHOOK_SECRET.\n4. Для автозапуска курса после mini app регистрации нужен webhook path cb-miniapp-register.\n5. Контент в cb_lessons и cb_atlas_nodes уже должен быть загружен.",
+        "height": 360,
+        "width": 700,
+        "color": 6
+      },
+      "id": "cdd4c7fc-e249-47b9-a9ca-bed166d50044",
+      "name": "Import Notes2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2528,
+        1088
+      ]
+    },
+    {
+      "parameters": {
+        "content": "Загрузка демо-уроков в базу",
+        "height": 320,
+        "width": 620,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2550,
+        -320
+      ],
+      "typeVersion": 1,
+      "id": "d18ded31-03f3-4a66-9a5a-7c4c50795a0f",
+      "name": "Import Notes1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8cd89157-6119-4d53-89ea-66e705a3a66f",
+              "name": "site_url",
+              "value": "={{ $env.NEXT_PUBLIC_SITE_URL || 'https://your-site.vercel.app' }}",
+              "type": "string"
+            },
+            {
+              "id": "b14a08d7-55c8-434e-81ec-6160ab25be12",
+              "name": "miniapp_url",
+              "value": "={{ ($env.NEXT_PUBLIC_SITE_URL || 'https://your-site.vercel.app') + '/miniapp/register' }}",
+              "type": "string"
+            },
+            {
+              "id": "5133b23e-e278-49c4-9b24-f14583c60112",
+              "name": "quiz_url",
+              "value": "={{ ($env.NEXT_PUBLIC_SITE_URL || 'https://your-site.vercel.app') + '/quizzes/judgment-lab' }}",
+              "type": "string"
+            },
+            {
+              "id": "f9f33b7f-194c-4136-ae53-c0657eaac223",
+              "name": "openrouter_endpoint",
+              "value": "https://openrouter.ai/api/v1/chat/completions",
+              "type": "string"
+            },
+            {
+              "id": "48855297-dd49-4b68-a810-a26190d2fa1f",
+              "name": "openrouter_model",
+              "value": "={{ $env.OPENROUTER_MODEL || 'google/gemma-3-27b-it:free' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2288,
+        -160
+      ],
+      "id": "7c1801c6-8e0b-4c08-a2c1-a7b69f9779b5",
+      "name": "Project Config1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "После импорта:\n1. Назначь credentials на Telegram Trigger, Telegram и Postgres nodes.\n2. Открой node \"Project Config\" и впиши URL сайта на Vercel.\n3. Если OpenRouter key не передан в env контейнера n8n, отредактируй code node \"Call OpenRouter\".\n4. В cb_lessons уже должны быть данные, иначе боту нечего выдавать.\n",
+        "height": 320,
+        "width": 620,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2550,
+        -320
+      ],
+      "typeVersion": 1,
+      "id": "1012eb03-fe9a-460c-99af-6677d60dc031",
+      "name": "Import Notes"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Attach Config (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Config (Telegram)": {
+      "main": [
+        [
+          {
+            "node": "Is Callback?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Callback?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Callback Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Message Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Callback Context": {
+      "main": [
+        [
+          {
+            "node": "Answer Callback",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Callback User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Callback User": {
+      "main": [
+        [
+          {
+            "node": "Callback Registered?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback Registered?": {
+      "main": [
+        [
+          {
+            "node": "Normalize Callback Route",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Registration Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Callback Route": {
+      "main": [
+        [
+          {
+            "node": "Callback Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback Route": {
+      "main": [
+        [
+          {
+            "node": "Freeze Lesson Card",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Lesson",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Lesson For AI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Hide AI Prompt Buttons",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Freeze Lesson Card": {
+      "main": [
+        [
+          {
+            "node": "Complete Lesson",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Complete Lesson": {
+      "main": [
+        [
+          {
+            "node": "Prepare Course Entry (Callback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Lesson": {
+      "main": [
+        [
+          {
+            "node": "Send Saved Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Lesson For AI": {
+      "main": [
+        [
+          {
+            "node": "Send AI Suggestions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hide AI Prompt Buttons": {
+      "main": [
+        [
+          {
+            "node": "Send Thinking (Callback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Thinking (Callback)": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Suggest Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Message Context": {
+      "main": [
+        [
+          {
+            "node": "Message Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message Route": {
+      "main": [
+        [
+          {
+            "node": "Is /start?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Text User",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Voice User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is /start?": {
+      "main": [
+        [
+          {
+            "node": "Get Start User",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Unknown Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Start User": {
+      "main": [
+        [
+          {
+            "node": "Start Registered?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Registered?": {
+      "main": [
+        [
+          {
+            "node": "Send Start Greeting",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Start User",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Start Greeting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Start Greeting": {
+      "main": [
+        [
+          {
+            "node": "Prepare Course Entry (Start)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Start User": {
+      "main": [
+        [
+          {
+            "node": "Send Registration Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Text User": {
+      "main": [
+        [
+          {
+            "node": "Text Registered?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Registered?": {
+      "main": [
+        [
+          {
+            "node": "Send Thinking (Message)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Registration Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Thinking (Message)": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Text Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Voice User": {
+      "main": [
+        [
+          {
+            "node": "Voice Registered?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Voice Registered?": {
+      "main": [
+        [
+          {
+            "node": "Send Thinking (Voice)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Registration Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Thinking (Voice)": {
+      "main": [
+        [
+          {
+            "node": "Get Voice File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Voice File": {
+      "main": [
+        [
+          {
+            "node": "Transcribe Voice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe Voice": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Voice Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Course Entry (Callback)": {
+      "main": [
+        [
+          {
+            "node": "Ensure Lesson Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Course Entry (Start)": {
+      "main": [
+        [
+          {
+            "node": "Ensure Lesson Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ensure Lesson Queue": {
+      "main": [
+        [
+          {
+            "node": "Activate Current Lesson",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Activate Current Lesson": {
+      "main": [
+        [
+          {
+            "node": "Get Current Lesson",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Current Lesson": {
+      "main": [
+        [
+          {
+            "node": "Has Current Lesson?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Current Lesson?": {
+      "main": [
+        [
+          {
+            "node": "Build Lesson Card",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Course Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Lesson Card": {
+      "main": [
+        [
+          {
+            "node": "Has Lesson Image?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Lesson Image?": {
+      "main": [
+        [
+          {
+            "node": "Send Lesson Photo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Lesson Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Lesson Photo": {
+      "main": [
+        [
+          {
+            "node": "Send Lesson Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Suggest Input": {
+      "main": [
+        [
+          {
+            "node": "Resolve AI Lesson",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Text Input": {
+      "main": [
+        [
+          {
+            "node": "Resolve AI Lesson",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Voice Input": {
+      "main": [
+        [
+          {
+            "node": "Resolve AI Lesson",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve AI Lesson": {
+      "main": [
+        [
+          {
+            "node": "Has AI Lesson?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has AI Lesson?": {
+      "main": [
+        [
+          {
+            "node": "Ensure AI Thread",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send No Lesson Yet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ensure AI Thread": {
+      "main": [
+        [
+          {
+            "node": "Get AI History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get AI History": {
+      "main": [
+        [
+          {
+            "node": "Build AI Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build AI Prompt": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Store AI User Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store AI User Message": {
+      "main": [
+        [
+          {
+            "node": "Store AI Assistant Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store AI Assistant Message": {
+      "main": [
+        [
+          {
+            "node": "Sanitize for Telegram HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize for Telegram HTML": {
+      "main": [
+        [
+          {
+            "node": "Carry AI Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Carry AI Context": {
+      "main": [
+        [
+          {
+            "node": "Chunk for Telegram HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chunk for Telegram HTML": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Chunks": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Is Last AI Chunk?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Last AI Chunk?": {
+      "main": [
+        [
+          {
+            "node": "Send AI Final Chunk",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send AI Chunk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send AI Chunk": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send AI Final Chunk": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Miniapp Registration Webhook": {
+      "main": [
+        [
+          {
+            "node": "Attach Config (Webhook)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Config (Webhook)": {
+      "main": [
+        [
+          {
+            "node": "Webhook Secret Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Secret Valid?": {
+      "main": [
+        [
+          {
+            "node": "Send Registration Complete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Webhook Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Registration Complete": {
+      "main": [
+        [
+          {
+            "node": "Prepare Course Entry (Webhook)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Course Entry (Webhook)": {
+      "main": [
+        [
+          {
+            "node": "Get Webhook User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Webhook User": {
+      "main": [
+        [
+          {
+            "node": "Webhook User Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook User Exists?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Course Entry (Webhook User)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Webhook User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Webhook User": {
+      "main": [
+        [
+          {
+            "node": "Prepare Course Entry (Webhook User)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Course Entry (Webhook User)": {
+      "main": [
+        [
+          {
+            "node": "Ensure Lesson Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "KbfhwyT42DtE5e28",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "e97a6fc6-8bf4-42e9-91a6-dc83a7aca93d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dcf1231550766e408b4d109c592fef4ce6e196eff5cb80e2a724484f6de05f06"
+  },
+  "id": "Aq2t2gDehvDQJxQq",
+  "tags": []
+}
