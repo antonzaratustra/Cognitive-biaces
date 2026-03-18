@@ -151,6 +151,84 @@
       }
     },
     {
+      "id": "get-webhook-user",
+      "name": "Get Webhook User",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2160,
+        2000
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select\n  u.*,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ String($json.last_name || '').replace(/'/g, \"''\") }}'::text as last_name,\n  '{{ String($json.tg_username || '').replace(/'/g, \"''\") }}'::text as tg_username,\n  '{{ $json.email }}'::text as email,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key\nfrom (select 1) seed\nleft join public.cb_users u on u.tg_id='{{ $json.tg_id }}'\nlimit 1;",
+        "options": {}
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "webhook-user-exists",
+      "name": "Webhook User Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1936,
+        2000
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "webhook-user-id-exists",
+              "leftValue": "={{ Boolean($json.id) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "create-webhook-user",
+      "name": "Create Webhook User",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1712,
+        2128
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into public.cb_users (tg_id, tg_username, first_name, last_name, email, updated_at)\nvalues (\n  '{{ $json.tg_id }}',\n  {{ $json.tg_username ? \"'\" + String($json.tg_username).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  {{ $json.first_name ? \"'\" + String($json.first_name).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  {{ $json.last_name ? \"'\" + String($json.last_name).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  {{ $json.email ? \"'\" + String($json.email).replace(/'/g, \"''\") + \"'\" : 'null' }},\n  now()\n)\non conflict (tg_id) do update set\n  tg_username = excluded.tg_username,\n  first_name = coalesce(public.cb_users.first_name, excluded.first_name),\n  last_name = coalesce(public.cb_users.last_name, excluded.last_name),\n  email = coalesce(public.cb_users.email, excluded.email),\n  updated_at = now()\nreturning\n  tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key;",
+        "options": {}
+      }
+    },
+    {
+      "id": "prepare-course-entry-webhook-user",
+      "name": "Prepare Course Entry (Webhook User)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1488,
+        2128
+      ],
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$json,\n    course_entry_source: 'registration_webhook'\n  }\n}];"
+      }
+    },
+    {
       "id": "is-callback",
       "name": "Is Callback?",
       "type": "n8n-nodes-base.if",
@@ -1073,7 +1151,7 @@
       "typeVersion": 2.6,
       "position": [
         -816,
-        1296
+        2128
       ],
       "parameters": {
         "operation": "executeQuery",
@@ -1700,6 +1778,57 @@
       ]
     },
     "Prepare Course Entry (Webhook)": {
+      "main": [
+        [
+          {
+            "node": "Get Webhook User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Webhook User": {
+      "main": [
+        [
+          {
+            "node": "Webhook User Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook User Exists?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Course Entry (Webhook User)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Webhook User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Webhook User": {
+      "main": [
+        [
+          {
+            "node": "Prepare Course Entry (Webhook User)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Course Entry (Webhook User)": {
       "main": [
         [
           {
