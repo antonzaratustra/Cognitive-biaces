@@ -59,14 +59,14 @@ export function LeadForm({ source, utmCampaign, utmMedium, utmSource }: LeadForm
     }
 
     const leadId = payload.leadId || "lead_web";
-    setBotLink(telegramDeepLink(`lead_${leadId}`));
+    const finalBotLink = telegramDeepLink(`lead_${leadId}`);
+    setBotLink(finalBotLink);
     setStatus("success");
-    setMessage(
-      payload.mode === "supabase"
-        ? "Готово. Место в раннем доступе закреплено — теперь можно открыть Telegram и забрать старт курса 👇"
-        : "Форма уже работает. Пока включен demo-режим, но переход в Telegram и логика старта уже подготовлены 👇"
-    );
     setForm(emptyForm);
+    
+    // Open Telegram in a new tab immediately
+    window.open(finalBotLink, "_blank", "noopener,noreferrer");
+    setMessage("Готово. Место закреплено — открываю Telegram в новой вкладке...");
   }
 
   return (
@@ -74,8 +74,8 @@ export function LeadForm({ source, utmCampaign, utmMedium, utmSource }: LeadForm
       <div className="eyebrow">✉️ Ранний доступ</div>
       <h3>Оставь контакты и забери вход в курс без лишней суеты.</h3>
       <p>
-        Email нужен, чтобы прислать обновления, новые разделы и доступ к практике. Telegram поможет мягко продолжить
-        путь уже внутри курса: от первого урока до квизов и AI-разборов.
+        Email нужен для важных обновлений. Telegram поможет мягко продолжить
+        путь: от первого урока до квизов и AI-разборов.
       </p>
 
       <form className="lead-form" onSubmit={handleSubmit}>
@@ -92,7 +92,7 @@ export function LeadForm({ source, utmCampaign, utmMedium, utmSource }: LeadForm
         </label>
 
         <label>
-          Telegram username
+          Telegram username (необязательно)
           <input
             autoComplete="username"
             placeholder="@username"
@@ -102,26 +102,29 @@ export function LeadForm({ source, utmCampaign, utmMedium, utmSource }: LeadForm
           />
         </label>
 
-        <label className="checkbox-row">
-          <input
-            checked={form.consentEmail}
-            type="checkbox"
-            onChange={(event) => setForm((current) => ({ ...current, consentEmail: event.target.checked }))}
-          />
-          <span>Хочу получать письма о новых уроках, квизах и редких полезных обновлениях.</span>
-        </label>
+        <div className="form-checkboxes">
+          <label className="checkbox-row">
+            <input
+              checked={form.consentTerms}
+              required
+              type="checkbox"
+              onChange={(event) => setForm((current) => ({ ...current, consentTerms: event.target.checked }))}
+            />
+            <span>Согласен на обработку персональных данных</span>
+          </label>
 
-        <label className="checkbox-row">
-          <input
-            checked={form.consentTerms}
-            type="checkbox"
-            onChange={(event) => setForm((current) => ({ ...current, consentTerms: event.target.checked }))}
-          />
-          <span>Согласен на обработку данных и понимаю, что доступ к новым функциям будет открываться поэтапно.</span>
-        </label>
+          <label className="checkbox-row">
+            <input
+              checked={form.consentEmail}
+              type="checkbox"
+              onChange={(event) => setForm((current) => ({ ...current, consentEmail: event.target.checked }))}
+            />
+            <span>Хочу получать письма о новых уроках и квизах</span>
+          </label>
+        </div>
 
         <button className="primary-button" disabled={status === "submitting"} type="submit">
-          {status === "submitting" ? "Сохраняю..." : "Забрать место и открыть Telegram"}
+          {status === "submitting" ? "Сохраняю..." : "Зарегистрироваться и открыть Telegram"}
         </button>
       </form>
 
@@ -129,8 +132,8 @@ export function LeadForm({ source, utmCampaign, utmMedium, utmSource }: LeadForm
         <div className={`form-status form-status--${status}`}>
           <p>{message}</p>
           {status === "success" ? (
-            <a className="secondary-link" href={botLink}>
-              Перейти в Telegram
+            <a className="secondary-link" href={botLink} target="_blank" rel="noopener noreferrer">
+              Перейти в Telegram вручную
             </a>
           ) : null}
         </div>

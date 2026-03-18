@@ -10,8 +10,7 @@
 | :--- | :--- | :--- | :--- | :--- |
 | **Имя (Display Name)** | `/setname` | Атлас когнитивных искажений 🧠 | Cognitive Bias Atlas 🧠 | ~64 симв. |
 | **Username** | При создании | `CognitiveAtlasBot` / `BiasAtlasBot` | — | 5–32 симв. |
-| **Краткое описание** | `/setdescription` | **Атлас искажений: Перестань действовать на автопилоте.** 
-ери? Это твой мозг расставляет ловушки.<br><br>**С Атласом ты:**<br>1. Исследуешь 180+ искажений на живой карте.<br>2. Проживаешь «Aha!»-моменты в квизах.<br>3. Получаешь ясность там, где другие поддаются эмоциям.<br><br>Это быстрее книг и глубже Википедии. Уволь когнитивный шум и получи интеллектуальное преимущество.<br><br>👇 Нажми **Start**, чтобы увидеть карту. | **Bias Atlas: Stop living on autopilot.** 🧠<br><br>Recognize yourself? Looking only for what confirms your opinion? Making mistakes due to fear of loss? Your brain is setting traps.<br><br>**With Atlas you:**<br>1. Explore 180+ biases on a live map.<br>2. Experience "Aha!" moments in quizzes.<br>3. Gain clarity where others give in to emotions.<br><br>It's faster than books and deeper than Wikipedia. Fire the cognitive noise and gain an intellectual edge.<br><br>👇 Press **Start** to see the map. | 512 симв. |
+| **Краткое описание** | `/setdescription` | Исследуйте карту ловушек вашего разума. 180+ когнитивных искажений в интерактивном Атласе, квизы и практика критического мышления. Нажмите **Start**, чтобы открыть карту. | Explore the map of your mind's traps. 180+ cognitive biases in an interactive Atlas, quizzes, and critical thinking practice. Press **Start** to open the map. | 512 симв. |
 | **О боте (About / Bio)** | `/setabouttext` | Интерактивный гид по архитектуре мышления. 🧠 Библиотека искажений, тесты и практика принятия решений. | An interactive guide to the architecture of thinking. 🧠 Bias library, tests, and decision-making practice. | 120 симв. |
 
 ---

@@ -12,6 +12,6 @@ export const leadSchema = z.object({
   utmSource: z.string().trim().optional(),
   utmMedium: z.string().trim().optional(),
   utmCampaign: z.string().trim().optional(),
-  consentEmail: z.boolean().refine((value) => value, "Нужно согласие на рассылку"),
-  consentTerms: z.boolean().refine((value) => value, "Нужно принять условия")
+  consentEmail: z.boolean().default(false),
+  consentTerms: z.boolean().default(false)
 });
