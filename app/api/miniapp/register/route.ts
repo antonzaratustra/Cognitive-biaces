@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -7,9 +7,9 @@ import { parseTelegramUser, validateTelegramInitData } from "@/lib/telegram-auth
 const schema = z.object({
   consentEmail: z.boolean(),
   consentTerms: z.boolean(),
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email(),
   initData: z.string().min(1),
-  source: z.string().optional()
+  source: z.string().trim().optional()
 });
 
 async function notifyN8nRegistration(input: {
@@ -33,6 +33,7 @@ async function notifyN8nRegistration(input: {
       headers: {
         "Content-Type": "application/json"
       },
+      signal: AbortSignal.timeout(5000),
       body: JSON.stringify({
         secret: process.env.N8N_WEBHOOK_SECRET || "",
         tg_id: input.tgId,
@@ -140,7 +141,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: leadInsert.error.message }, { status: 500 });
   }
 
-  await notifyN8nRegistration({
+  const notifyPayload = {
     email: parsed.data.email,
     firstName: user.first_name || null,
     lastName: user.last_name || null,
@@ -148,9 +149,9 @@ export async function POST(request: Request) {
     source: parsed.data.source || "miniapp_register",
     tgId: String(user.id),
     tgUsername: user.username || null
-  });
+  };
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     ok: true,
     mode: "supabase",
     leadId: leadInsert.data.id,
@@ -160,4 +161,10 @@ export async function POST(request: Request) {
       username: user.username || null
     }
   });
+
+  after(async () => {
+    await notifyN8nRegistration(notifyPayload);
+  });
+
+  return response;
 }
