@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getAtlasGraph } from "@/lib/content";
 
 export async function GET(request: Request) {
-  const graph = getAtlasGraph();
+  const graph = await getAtlasGraph();
   const { searchParams } = new URL(request.url);
   const sectionId = searchParams.get("section");
 

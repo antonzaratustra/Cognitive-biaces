@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getLessonBySlug, getRelatedLessons } from "@/data/course-data";
+import { getLessonBySlug, getRelatedLessons } from "@/lib/content";
 
 type RouteContext = {
   params: Promise<{
@@ -10,7 +10,7 @@ type RouteContext = {
 
 export async function GET(_request: Request, context: RouteContext) {
   const { slug } = await context.params;
-  const lesson = getLessonBySlug(slug);
+  const lesson = await getLessonBySlug(slug);
 
   if (!lesson) {
     return NextResponse.json({ error: "bias_not_found" }, { status: 404 });
@@ -18,6 +18,6 @@ export async function GET(_request: Request, context: RouteContext) {
 
   return NextResponse.json({
     lesson,
-    related: getRelatedLessons(slug)
+    related: await getRelatedLessons(slug)
   });
 }

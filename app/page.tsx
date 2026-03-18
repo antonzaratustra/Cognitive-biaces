@@ -71,9 +71,7 @@ type HomePageProps = {
 };
 
 export default async function HomePage({ searchParams }: HomePageProps) {
-  const featuredLessons = getFeaturedLessons();
-  const graph = getAtlasGraph();
-  const lessons = getAllLessons();
+  const [featuredLessons, graph, lessons] = await Promise.all([getFeaturedLessons(), getAtlasGraph(), getAllLessons()]);
   const params = await searchParams;
 
   return (

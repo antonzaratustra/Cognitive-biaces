@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { SiteHeader } from "@/components/site-header";
-import { getLessonBySlug, getRelatedLessons, getSectionById, lessons } from "@/data/course-data";
+import { getLessonBySlug, getRelatedLessons, getSectionById } from "@/lib/content";
 import { atlasDeepLink } from "@/lib/telegram";
 
 type BiasPageProps = {
@@ -11,22 +11,17 @@ type BiasPageProps = {
   }>;
 };
 
-export async function generateStaticParams() {
-  return lessons.map((lesson) => ({
-    slug: lesson.slug
-  }));
-}
+export const dynamic = "force-dynamic";
 
 export default async function BiasPage({ params }: BiasPageProps) {
   const { slug } = await params;
-  const lesson = getLessonBySlug(slug);
+  const lesson = await getLessonBySlug(slug);
 
   if (!lesson) {
     notFound();
   }
 
-  const section = getSectionById(lesson.sectionId);
-  const related = getRelatedLessons(slug);
+  const [section, related] = await Promise.all([getSectionById(lesson.sectionId), getRelatedLessons(slug)]);
 
   return (
     <>
