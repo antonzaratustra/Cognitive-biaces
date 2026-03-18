@@ -614,8 +614,8 @@ main {
   position: absolute;
   top: 0;
   left: 0;
-  width: 1640px;
-  height: 1640px;
+  width: 1960px;
+  height: 1960px;
   transform-origin: 0 0;
   will-change: transform;
 }
@@ -682,8 +682,8 @@ main {
 
 .radial-atlas-svg {
   display: block;
-  width: 1640px;
-  height: 1640px;
+  width: 1960px;
+  height: 1960px;
   overflow: visible;
 }
 
@@ -723,6 +723,31 @@ main {
   text-align: center;
 }
 
+.atlas-hover-label {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  z-index: 2;
+  min-width: 360px;
+  max-width: min(720px, calc(100% - 220px));
+  padding: 12px 18px;
+  transform: translateX(-50%);
+  color: rgba(255, 246, 239, 0.72);
+  font-family: var(--font-display), sans-serif;
+  font-size: 0.96rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: center;
+  pointer-events: none;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.atlas-hover-label--visible {
+  color: rgba(255, 246, 239, 0.96);
+}
+
 .atlas-orbit {
   fill: none;
   stroke: rgba(255, 255, 255, 0.06);
@@ -758,11 +783,13 @@ main {
 .atlas-section-connector,
 .atlas-branch-label-stem {
   stroke-linecap: round;
+  pointer-events: none;
 }
 
 .atlas-branch-label {
   font-size: 12px;
   letter-spacing: 0.02em;
+  pointer-events: all;
 }
 
 .atlas-sector-title {
@@ -775,6 +802,12 @@ main {
 .atlas-branch-label-dot,
 .atlas-section-title-dot {
   filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.12));
+}
+
+.atlas-subgroup-dot,
+.atlas-branch-label-dot,
+.atlas-subgroup-hit {
+  pointer-events: all;
 }
 
 .atlas-branch {
@@ -795,7 +828,7 @@ main {
 .atlas-node-label {
   font-size: 12px;
   letter-spacing: 0.02em;
-  pointer-events: none;
+  pointer-events: all;
 }
 
 .atlas-node-hit {
@@ -1132,8 +1165,8 @@ main {
   }
 
   .radial-atlas-svg {
-    width: 1640px;
-    height: 1640px;
+    width: 1960px;
+    height: 1960px;
   }
 
   .radial-atlas-viewport {
@@ -1143,6 +1176,14 @@ main {
   .atlas-canvas-hud {
     right: 14px;
     bottom: 14px;
+  }
+
+  .atlas-hover-label {
+    bottom: 14px;
+    min-width: 0;
+    max-width: calc(100% - 168px);
+    font-size: 0.88rem;
+    padding: 10px 14px;
   }
 
   .atlas-section-badge {

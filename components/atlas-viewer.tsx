@@ -89,17 +89,17 @@ const colorMap = {
   }
 } as const;
 
-const svgSize = 1640;
+const svgSize = 1960;
 const center = svgSize / 2;
 const sectionQuadrantAngles = [315, 45, 135, 225];
-const sectionSpan = 74;
-const sectionPadding = 7;
-const subgroupGap = 5;
-const sectionAnchorRadius = 178;
-const subgroupSplitRadius = 286;
-const nodeOrbitRadius = 392;
-const branchLabelRadius = 760;
-const outerArcRadius = 796;
+const sectionSpan = 88;
+const sectionPadding = 2.5;
+const subgroupGap = 0.85;
+const sectionAnchorRadius = 300;
+const subgroupSplitRadius = 560;
+const nodeOrbitRadius = 760;
+const branchLabelRadius = 910;
+const outerArcRadius = 950;
 const sectionTitleRadius = 540;
 const maxScale = 2.6;
 
@@ -230,6 +230,7 @@ function getFitTransform(width: number, height: number): ViewTransform {
 
 export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerProps) {
   const [activeSection, setActiveSection] = useState<string>("all");
+  const [hoveredAtlasLabel, setHoveredAtlasLabel] = useState<string | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedSlug, setSelectedSlug] = useState<string | null>(initialSlug);
@@ -691,7 +692,12 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
             const stemStart = polar(branchLabelRadius - 26, layout.angle);
 
             return (
-              <g key={subgroup.id} style={{ opacity }}>
+              <g
+                key={subgroup.id}
+                style={{ opacity }}
+                onPointerEnter={() => setHoveredAtlasLabel(subgroup.title)}
+                onPointerLeave={() => setHoveredAtlasLabel((current) => (current === subgroup.title ? null : current))}
+              >
                 <circle className="atlas-subgroup-dot" cx={layout.splitPoint.x} cy={layout.splitPoint.y} fill={color.dot} r={3.8} />
                 <line
                   className="atlas-branch-label-stem"
@@ -710,6 +716,7 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
                     </tspan>
                   ))}
                 </text>
+                <circle className="atlas-subgroup-hit" cx={layout.labelPoint.x} cy={layout.labelPoint.y} fill="transparent" r={16} />
               </g>
             );
           })
@@ -726,9 +733,8 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
           const visible = visibleNodeIds.has(node.id);
           const selected = selectedSlug === node.slug;
           const opacity = visible ? 1 : 0.12;
-          const isLowerRight = layout.dot.x > center && layout.dot.y > center;
-          const nodeLabelAnchor = layout.dot.y < center || isLowerRight ? "start" : "end";
-          const nodeLabelAngle = isLowerRight ? normalizeAngle(layout.labelAngle + 180) : layout.labelAngle;
+          const isLowerHalf = layout.dot.y > center;
+          const nodeLabelAngle = isLowerHalf ? normalizeAngle(layout.labelAngle + 180) : layout.labelAngle;
 
           return (
             <g key={node.id} className="atlas-node-group" style={{ opacity }}>
@@ -749,7 +755,9 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
                   className={selected ? "atlas-node-label atlas-node-label--selected" : "atlas-node-label"}
                   dominantBaseline="middle"
                   fill={color.text}
-                  textAnchor={nodeLabelAnchor}
+                  onPointerEnter={() => setHoveredAtlasLabel(node.title)}
+                  onPointerLeave={() => setHoveredAtlasLabel((current) => (current === node.title ? null : current))}
+                  textAnchor="start"
                   x={0}
                   y={0}
                 >
@@ -764,13 +772,17 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
                 cy={layout.dot.y}
                 fill="transparent"
                 onClick={() => handleNodeSelect(node.slug)}
+                onFocus={() => setHoveredAtlasLabel(node.title)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
                     handleNodeSelect(node.slug);
                   }
                 }}
+                onPointerEnter={() => setHoveredAtlasLabel(node.title)}
+                onPointerLeave={() => setHoveredAtlasLabel((current) => (current === node.title ? null : current))}
                 onPointerDownCapture={(event) => event.stopPropagation()}
+                onBlur={() => setHoveredAtlasLabel((current) => (current === node.title ? null : current))}
                 r={16}
                 role="button"
                 tabIndex={visible ? 0 : -1}
@@ -881,6 +893,10 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
                 </div>
               );
             })}
+          </div>
+
+          <div className={hoveredAtlasLabel ? "glass-card atlas-hover-label atlas-hover-label--visible" : "glass-card atlas-hover-label"}>
+            {hoveredAtlasLabel ?? "Наведи на точку или подпись, чтобы увидеть название"}
           </div>
 
           <div className="glass-card atlas-canvas-hud">
