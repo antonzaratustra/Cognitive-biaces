@@ -123,8 +123,8 @@ export function LeadForm({ source, utmCampaign, utmMedium, utmSource }: LeadForm
           </label>
         </div>
 
-        <button className="primary-button" disabled={status === "submitting"} type="submit">
-          {status === "submitting" ? "Сохраняю..." : "Зарегистрироваться и открыть Telegram"}
+        <button className="primary-button primary-button--wide" disabled={status === "submitting"} type="submit">
+          {status === "submitting" ? "Сохраняю..." : "Зарегистрироваться в Telegram"}
         </button>
       </form>
 

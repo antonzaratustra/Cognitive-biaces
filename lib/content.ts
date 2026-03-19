@@ -302,7 +302,25 @@ export async function getLessonBySlug(slug: string) {
 }
 
 export async function getFeaturedLessons() {
-  return (await getContentSnapshot()).lessons.slice(0, 6);
+  const snapshot = await getContentSnapshot();
+  
+  // Выбираем 6 самых цепляющих искажений из всех 4 сфер
+  const featuredSlugs = [
+    // Когда запоминаем и вспоминаем (memory) - жёлтый
+    "peak-end-rule",
+    "hindsight-bias",
+    // Когда много информации (information) - синий
+    "availability-heuristic",
+    "confirmation-bias",
+    // Когда не хватает смысла (meaning) - красный
+    "narrative-fallacy",
+    // Когда быстро реагируем (reaction) - зелёный
+    "loss-aversion"
+  ];
+  
+  return featuredSlugs
+    .map((slug) => snapshot.lessons.find((lesson) => lesson.slug === slug) || null)
+    .filter((lesson): lesson is Lesson => Boolean(lesson));
 }
 
 export async function getAllSections() {

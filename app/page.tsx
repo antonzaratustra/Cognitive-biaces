@@ -5,7 +5,15 @@ import { AtlasViewer } from "@/components/atlas-viewer";
 import { LeadForm } from "@/components/lead-form";
 import { SiteHeader } from "@/components/site-header";
 import { getAllLessons, getAtlasGraph, getFeaturedLessons } from "@/lib/content";
-import { quizOfferLink, telegramDeepLink } from "@/lib/telegram";
+import { telegramDeepLink } from "@/lib/telegram";
+
+function getCategoryColorToken(category: string): string {
+  if (category.includes("запоминаем") || category.includes("Память")) return "soft-yellow";
+  if (category.includes("много информации") || category.includes("Перегрузка")) return "soft-blue";
+  if (category.includes("смысл") || category.includes("Смысл")) return "soft-red";
+  if (category.includes("реагируем") || category.includes("Реакции")) return "soft-green";
+  return "soft-blue";
+}
 
 const valueCards = [
   {
@@ -44,19 +52,23 @@ const audienceCards = [
 const flowSteps = [
   {
     title: "Оставляешь контакт и забираешь вход",
-    text: "На сайте сохраняешь email, при желании Telegram username, и сразу переходишь в бот без долгой регистрации."
+    text: "На сайте сохраняешь email, при желании Telegram username, и сразу переходишь в бот без долгой регистрации.",
+    colorToken: "soft-blue"
   },
   {
     title: "Проходишь курс от начала до конца",
-    text: "Уроки идут последовательно: коротко, ясно и без ощущения, что тебя бросили в энциклопедию терминов."
+    text: "Уроки идут последовательно: коротко, ясно и без ощущения, что тебя бросили в энциклопедию терминов.",
+    colorToken: "soft-green"
   },
   {
     title: "В любой момент спрашиваешь AI",
-    text: "Если хочется глубже, бот предлагает три готовых вопроса и дает продолжить разговор голосом или текстом."
+    text: "Если хочется глубже, бот предлагает три готовых вопроса и дает продолжить разговор голосом или текстом.",
+    colorToken: "soft-yellow"
   },
   {
     title: "Когда захочется практики — открываешь квизы",
-    text: "На сайте тебя ждут сценарии, разборы и проверка на внимательность к собственным когнитивным ловушкам."
+    text: "На сайте тебя ждут сценарии, разборы и проверка на внимательность к собственным когнитивным ловушкам.",
+    colorToken: "soft-red"
   }
 ];
 
@@ -178,6 +190,30 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               Если курс тебе откликается, лучше забрать место сейчас: старт придет в Telegram, а обновления и новые
               квизы не потеряются в шуме.
             </p>
+            
+            <div className="lead-benefits">
+              <div className="lead-benefit">
+                <span className="lead-benefit__icon">📬</span>
+                <div>
+                  <strong>Первый урок сразу</strong>
+                  <span>Начни проходить курс в первые 5 минут после регистрации</span>
+                </div>
+              </div>
+              <div className="lead-benefit">
+                <span className="lead-benefit__icon">🧠</span>
+                <div>
+                  <strong>AI-помощник в каждом уроке</strong>
+                  <span>Три готовых вопроса и свободный диалог по теме</span>
+                </div>
+              </div>
+              <div className="lead-benefit">
+                <span className="lead-benefit__icon">🎯</span>
+                <div>
+                  <strong>Практика через квизы</strong>
+                  <span>Проверяй себя на реальных примерах и сценариях</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <LeadForm
@@ -198,18 +234,21 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </div>
 
           <div className="bias-grid">
-            {featuredLessons.map((lesson) => (
-              <article key={lesson.id} className="glass-card bias-card">
-                <div className="bias-card__tag">{lesson.category}</div>
-                <h3>{lesson.title}</h3>
-                <p>{lesson.shortText}</p>
-                <div className="bias-card__actions">
-                  <Link className="secondary-link" href={`/biases/${lesson.slug}`}>
-                    Читать карточку
-                  </Link>
-                </div>
-              </article>
-            ))}
+            {featuredLessons.map((lesson) => {
+              const colorToken = getCategoryColorToken(lesson.category);
+              return (
+                <article key={lesson.id} className={`glass-card bias-card bias-card--${colorToken}`}>
+                  <div className="bias-card__tag">{lesson.category}</div>
+                  <h3>{lesson.title}</h3>
+                  <p>{lesson.shortText}</p>
+                  <div className="bias-card__actions">
+                    <Link className="secondary-link" href={`/biases/${lesson.slug}`}>
+                      Читать карточку
+                    </Link>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </section>
 
@@ -222,7 +261,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <div className="flow-grid">
             {flowSteps.map((step, index) => (
               <article key={step.title} className="glass-card flow-step">
-                <span className="flow-step__index">0{index + 1}</span>
+                <span className={`flow-step__index flow-step__index--${step.colorToken}`}>0{index + 1}</span>
                 <h3>{step.title}</h3>
                 <p>{step.text}</p>
               </article>
@@ -244,11 +283,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
             <div className="quiz-hero__actions">
               <Link className="primary-button" href="/quizzes/judgment-lab">
-                Открыть квиз-страницу
+                Открыть квизы
               </Link>
-              <a className="ghost-button" href={quizOfferLink()}>
-                Купить через Stars
-              </a>
             </div>
           </div>
         </section>
@@ -258,7 +294,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <div className="eyebrow">Старт</div>
             <h2>Если тема давно тебя цепляла — это хороший момент войти в нее глубоко и по-человечески понятно.</h2>
           </div>
-          <a className="primary-button" href={telegramDeepLink("start")}>
+          <a className="primary-button primary-button--wide" href={telegramDeepLink("start")}>
             Перейти в Telegram <ArrowRight size={18} />
           </a>
         </section>

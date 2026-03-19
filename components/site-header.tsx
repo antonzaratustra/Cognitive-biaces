@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { quizOfferLink, telegramDeepLink } from "@/lib/telegram";
+import { telegramDeepLink } from "@/lib/telegram";
 
 const navItems = [
   { href: "/#about", label: "О курсе" },
@@ -56,7 +56,7 @@ export function SiteHeader({ alwaysVisible = false }: SiteHeaderProps) {
             <a className="ghost-button" href={telegramDeepLink("start")}>
               Открыть курс
             </a>
-            <a className="primary-button" href={quizOfferLink()}>
+            <a className="primary-button" href="/quizzes/judgment-lab">
               Quiz pack
             </a>
           </div>

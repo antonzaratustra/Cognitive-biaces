@@ -196,6 +196,11 @@ main {
   font-family: var(--font-display), sans-serif;
   font-weight: 800;
   box-shadow: 0 10px 28px rgba(255, 127, 37, 0.24);
+  white-space: nowrap;
+}
+
+.primary-button--wide {
+  padding: 0 28px;
 }
 
 .ghost-button,
@@ -285,6 +290,9 @@ main {
 
 .hero-metrics {
   margin-top: 34px;
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 14px;
 }
 
 .hero-story-card,
@@ -397,6 +405,39 @@ main {
   align-items: flex-start;
 }
 
+.lead-benefits {
+  display: grid;
+  gap: 16px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.lead-benefit {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.lead-benefit__icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.lead-benefit strong {
+  display: block;
+  color: var(--text);
+  font-family: var(--font-display), sans-serif;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.lead-benefit span {
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
 .lead-card {
   display: grid;
   gap: 18px;
@@ -418,8 +459,7 @@ main {
   color: var(--muted-strong);
 }
 
-.lead-form input,
-.atlas-search__field input {
+.lead-form input {
   width: 100%;
   min-height: 50px;
   padding: 0 16px;
@@ -479,6 +519,23 @@ main {
   display: grid;
   gap: 14px;
   align-content: start;
+  border-top: 3px solid;
+}
+
+.bias-card--soft-blue {
+  border-top-color: #86b8ff;
+}
+
+.bias-card--soft-green {
+  border-top-color: #8ed39a;
+}
+
+.bias-card--soft-yellow {
+  border-top-color: #f0ca69;
+}
+
+.bias-card--soft-red {
+  border-top-color: #ef8c84;
 }
 
 .bias-card__tag {
@@ -507,6 +564,22 @@ main {
   font-family: var(--font-display), sans-serif;
   font-size: 2rem;
   font-weight: 800;
+}
+
+.flow-step__index--soft-blue {
+  color: #86b8ff;
+}
+
+.flow-step__index--soft-green {
+  color: #8ed39a;
+}
+
+.flow-step__index--soft-yellow {
+  color: #f0ca69;
+}
+
+.flow-step__index--soft-red {
+  color: #ef8c84;
 }
 
 .quiz-hero {
@@ -559,12 +632,17 @@ main {
   border: 1px solid rgba(255, 214, 176, 0.12);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.03);
+  flex: 1;
+  min-width: 0;
 }
 
 .atlas-search__field input {
   border: 0;
   background: transparent;
-  padding: 0;
+  padding: 12px 0;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
 }
 
 .atlas-filter-list {
@@ -902,6 +980,8 @@ main {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text);
   cursor: pointer;
+  display: grid;
+  place-items: center;
 }
 
 .atlas-modal h3,
