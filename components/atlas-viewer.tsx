@@ -98,8 +98,9 @@ const subgroupGap = 0.85;
 const sectionAnchorRadius = 300;
 const subgroupSplitRadius = 560;
 const nodeOrbitRadius = 760;
-const branchLabelRadius = 910;
-const outerArcRadius = 950;
+const subgroupDotRadius = 960;
+const branchLabelRadius = 1000;
+const outerArcRadius = 1040;
 const sectionTitleRadius = 540;
 const maxScale = 2.6;
 
@@ -231,6 +232,7 @@ function getFitTransform(width: number, height: number): ViewTransform {
 export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerProps) {
   const [activeSection, setActiveSection] = useState<string>("all");
   const [hoveredAtlasLabel, setHoveredAtlasLabel] = useState<string | null>(null);
+  const [hoveredControlHint, setHoveredControlHint] = useState<string | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedSlug, setSelectedSlug] = useState<string | null>(initialSlug);
@@ -413,7 +415,6 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
           const branchEnd = branchStart + branchSpan;
           const branchAngle = sectorMidAngle(branchStart, branchEnd);
           const splitPoint = polar(subgroupSplitRadius, branchAngle);
-          const labelPoint = polar(branchLabelRadius, branchAngle);
           const isLeft = branchAngle > 180;
 
           branchLayouts.set(branch.subgroup.id, {
@@ -421,8 +422,8 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
             id: branch.subgroup.id,
             isLeft,
             labelLines: wrapLines(branch.label, 24),
-            labelPoint,
-            splitPoint
+            labelPoint: polar(branchLabelRadius, branchAngle),
+            splitPoint: polar(subgroupSplitRadius, branchAngle)
           });
 
           const nodeAngles = branch.nodes.map((_, nodeIndex) =>
@@ -432,14 +433,24 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
           branch.nodes.forEach((node, nodeIndex) => {
             const angle = nodeAngles[nodeIndex];
             const dot = polar(nodeOrbitRadius, angle);
-            const labelStart = pointFrom(dot, angle, 26);
+            // textPoint дальше от центра чем точка, текст будет НАЧИНАТЬСЯ у точки
+            const textPoint = pointFrom(dot, angle, 26);
             const normalizedAngle = normalizeAngle(angle);
-            const isLeftSide = normalizedAngle > 180;
+            // Левая сторона: 90° - 270°
+            const isLeftSide = normalizedAngle > 90 && normalizedAngle < 270;
             const branchTurn = signedAngleDelta(centerAngle, branchAngle);
             const nodeTurn = signedAngleDelta(branchAngle, angle);
             const firstControl = controlBetween(sectionAnchor, splitPoint, clamp(branchTurn * 1.2, -52, 52));
             const secondControl = controlBetween(splitPoint, dot, clamp(nodeTurn * 1.4, -48, 48));
-            const labelAngle = normalizeAngle(normalizedAngle + (dot.y < center ? -90 : 90));
+            
+            // Базовый угол: тангенциально к окружности
+            // Для верхней половины: -90° (по часовой), для нижней: +90° (против)
+            const isUpperHalf = dot.y < center;
+            const baseLabelAngle = normalizeAngle(normalizedAngle + (isUpperHalf ? -90 : 90));
+            
+            // Для левой стороны поворачиваем на 180° чтобы текст читался
+            const labelAngle = isLeftSide ? normalizeAngle(baseLabelAngle + 180) : baseLabelAngle;
+            
             const branchPath = [
               `M ${sectionAnchor.x} ${sectionAnchor.y}`,
               `Q ${firstControl.x} ${firstControl.y} ${splitPoint.x} ${splitPoint.y}`,
@@ -454,7 +465,7 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
               isLeft: isLeftSide,
               labelAngle,
               node,
-              textPoint: labelStart
+              textPoint
             });
           });
 
@@ -669,7 +680,16 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
                 y1={sectionLineStart.y}
                 y2={sectionLayout.anchorPoint.y}
               />
-              <circle className="atlas-section-anchor" cx={sectionLayout.anchorPoint.x} cy={sectionLayout.anchorPoint.y} fill={color.dot} r={5.4} />
+              <circle
+                className="atlas-section-anchor"
+                cx={sectionLayout.anchorPoint.x}
+                cy={sectionLayout.anchorPoint.y}
+                fill={color.dot}
+                r={5.4}
+                onPointerEnter={() => setHoveredAtlasLabel(section.title)}
+                onPointerLeave={() => setHoveredAtlasLabel((current) => (current === section.title ? null : current))}
+                style={{ cursor: 'pointer' }}
+              />
               <circle className="atlas-section-title-dot" cx={sectionLayout.titleDot.x} cy={sectionLayout.titleDot.y} fill={color.dot} r={4.8} />
             </g>
           );
@@ -688,8 +708,7 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
             const opacity = selected ? 1 : 0.24;
             const textAnchor = layout.isLeft ? "end" : "start";
             const textX = layout.labelPoint.x + (layout.isLeft ? -14 : 14);
-            const textStartY = layout.labelPoint.y - ((layout.labelLines.length - 1) * 8);
-            const stemStart = polar(branchLabelRadius - 26, layout.angle);
+            const textStartY = layout.labelPoint.y - ((layout.labelLines.length - 1) * 11);
 
             return (
               <g
@@ -698,20 +717,20 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
                 onPointerEnter={() => setHoveredAtlasLabel(subgroup.title)}
                 onPointerLeave={() => setHoveredAtlasLabel((current) => (current === subgroup.title ? null : current))}
               >
-                <circle className="atlas-subgroup-dot" cx={layout.splitPoint.x} cy={layout.splitPoint.y} fill={color.dot} r={3.8} />
+                <circle className="atlas-subgroup-split-dot" cx={layout.splitPoint.x} cy={layout.splitPoint.y} fill={color.dot} r={4} />
+                <circle className="atlas-subgroup-dot" cx={layout.labelPoint.x} cy={layout.labelPoint.y} fill={color.dot} r={6} />
                 <line
                   className="atlas-branch-label-stem"
                   stroke={color.ring}
                   strokeOpacity="0.5"
-                  x1={stemStart.x}
+                  x1={layout.splitPoint.x}
                   x2={layout.labelPoint.x}
-                  y1={stemStart.y}
+                  y1={layout.splitPoint.y}
                   y2={layout.labelPoint.y}
                 />
-                <circle className="atlas-branch-label-dot" cx={layout.labelPoint.x} cy={layout.labelPoint.y} fill={color.dot} r={4.2} />
                 <text className="atlas-branch-label" fill={color.text} textAnchor={textAnchor} x={textX} y={textStartY}>
                   {layout.labelLines.map((line, index) => (
-                    <tspan key={`${layout.id}-${line}-${index}`} dy={index === 0 ? 0 : 16} x={textX}>
+                    <tspan key={`${layout.id}-${line}-${index}`} dy={index === 0 ? 0 : 22} x={textX}>
                       {line}
                     </tspan>
                   ))}
@@ -750,7 +769,7 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
                 strokeWidth={selected ? 2.4 : 0}
               />
 
-              <g transform={`translate(${layout.textPoint.x} ${layout.textPoint.y}) rotate(${nodeLabelAngle})`}>
+              <g transform={`translate(${layout.textPoint.x} ${layout.textPoint.y}) rotate(${layout.labelAngle})`}>
                 <text
                   className={selected ? "atlas-node-label atlas-node-label--selected" : "atlas-node-label"}
                   dominantBaseline="middle"
@@ -799,10 +818,10 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
               <BrainCircuit size={54} strokeWidth={1.7} />
             </div>
           </foreignObject>
-          <text className="atlas-core__title" textAnchor="middle" x={center} y={center + 56}>
+          <text className="atlas-core__title" textAnchor="middle" x={center} y={center + 62}>
             Когнитивные искажения
           </text>
-          <text className="atlas-core__subtitle" textAnchor="middle" x={center} y={center + 82}>
+          <text className="atlas-core__subtitle" textAnchor="middle" x={center} y={center + 96}>
             4 режима • 160+ уроков
           </text>
         </g>
@@ -911,6 +930,41 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
               <LocateFixed size={15} />
             </button>
           </div>
+
+          <div className="glass-card atlas-controls-hint">
+            <div 
+              className="atlas-controls-hint__item"
+              onMouseEnter={() => setHoveredControlHint("Перетаскивание мышью")}
+              onMouseLeave={() => setHoveredControlHint(null)}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/>
+                <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/>
+                <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
+                <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+              </svg>
+            </div>
+            <div 
+              className="atlas-controls-hint__item"
+              onMouseEnter={() => setHoveredControlHint("Масштаб: Cmd / Ctrl + колесо")}
+              onMouseLeave={() => setHoveredControlHint(null)}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 2v4"/>
+                <path d="M12 18v4"/>
+                <path d="M2 12h4"/>
+                <path d="M18 12h4"/>
+              </svg>
+            </div>
+          </div>
+
+          {hoveredControlHint && (
+            <div className="glass-card atlas-controls-tooltip">
+              {hoveredControlHint}
+            </div>
+          )}
 
           <div
             className="radial-atlas-stage"
