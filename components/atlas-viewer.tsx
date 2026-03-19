@@ -36,6 +36,8 @@ type NodeLayout = {
   labelAngle: number;
   node: AtlasNode;
   textPoint: Point;
+  textAnchor?: "start" | "end";
+  quadrant?: string;
 };
 
 type SectionLayout = {
@@ -433,23 +435,42 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
           branch.nodes.forEach((node, nodeIndex) => {
             const angle = nodeAngles[nodeIndex];
             const dot = polar(nodeOrbitRadius, angle);
-            // textPoint дальше от центра чем точка, текст будет НАЧИНАТЬСЯ у точки
-            const textPoint = pointFrom(dot, angle, 26);
             const normalizedAngle = normalizeAngle(angle);
-            // Левая сторона: 90° - 270°
-            const isLeftSide = normalizedAngle > 90 && normalizedAngle < 270;
+            const isLeftSide = normalizedAngle > 180;
+            const isUpperHalf = dot.y < center;
+            
+            // Determine quadrant
+            const quadrant = isUpperHalf 
+              ? (isLeftSide ? 'LU' : 'RU')
+              : (isLeftSide ? 'LL' : 'RL');
+            
+            // Quadrant-specific settings (visually tuned)
+            // RU: offset=20, rotate=false | LU: offset=20, rotate=true
+            // LL: offset=20, rotate=false | RL: offset=-20, rotate=true
+            const quadrantOffset = quadrant === 'RU' ? 20
+              : quadrant === 'LU' ? 20
+              : quadrant === 'LL' ? 20
+              : -20;
+            
+            const quadrantRotate = quadrant === 'LU' || quadrant === 'RL';
+            
+            // Текст ВСЕГДА дальше от центра чем точка (расходится лучами наружу)
+            const textPoint = pointFrom(dot, angle, Math.abs(quadrantOffset));
+            
+            // Правая сторона: текст НАЧИНАЕТСЯ у точки и идёт дальше от центра (textAnchor="start")
+            // Левая сторона: текст ЗАКАНЧИВАЕТСЯ у точки, идёт снаружи к точке (textAnchor="end")
+            const textAnchor = isLeftSide ? "end" : "start";
+            
+            // Базовый угол: тангенциально к окружности
+            // Для верхней половины: -90° (по часовой), для нижней: +90° (против)
+            // Поворот на 180° для LU и RL чтобы текст был читаемым
+            const baseLabelAngle = normalizeAngle(normalizedAngle + (isUpperHalf ? -90 : 90));
+            const labelAngle = quadrantRotate ? normalizeAngle(baseLabelAngle + 180) : baseLabelAngle;
+            
             const branchTurn = signedAngleDelta(centerAngle, branchAngle);
             const nodeTurn = signedAngleDelta(branchAngle, angle);
             const firstControl = controlBetween(sectionAnchor, splitPoint, clamp(branchTurn * 1.2, -52, 52));
             const secondControl = controlBetween(splitPoint, dot, clamp(nodeTurn * 1.4, -48, 48));
-            
-            // Базовый угол: тангенциально к окружности
-            // Для верхней половины: -90° (по часовой), для нижней: +90° (против)
-            const isUpperHalf = dot.y < center;
-            const baseLabelAngle = normalizeAngle(normalizedAngle + (isUpperHalf ? -90 : 90));
-            
-            // Для левой стороны поворачиваем на 180° чтобы текст читался
-            const labelAngle = isLeftSide ? normalizeAngle(baseLabelAngle + 180) : baseLabelAngle;
             
             const branchPath = [
               `M ${sectionAnchor.x} ${sectionAnchor.y}`,
@@ -462,10 +483,12 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
               branchPath,
               dot,
               id: node.id,
-              isLeft: isLeftSide,
+              isLeft: false,
               labelAngle,
               node,
-              textPoint
+              textPoint,
+              textAnchor,
+              quadrant
             });
           });
 
@@ -776,7 +799,7 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
                   fill={color.text}
                   onPointerEnter={() => setHoveredAtlasLabel(node.title)}
                   onPointerLeave={() => setHoveredAtlasLabel((current) => (current === node.title ? null : current))}
-                  textAnchor="start"
+                  textAnchor={layout.textAnchor || "start"}
                   x={0}
                   y={0}
                 >
