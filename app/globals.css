@@ -548,13 +548,18 @@ main {
 
 .bias-card {
   display: grid;
+  grid-template-rows: auto 1fr auto;
   gap: 14px;
-  align-content: start;
   border-top: 3px solid;
   min-height: 280px;
 }
 
+.bias-card__tag {
+  align-self: start;
+}
+
 .bias-card__actions {
+  align-self: end;
   margin-top: auto;
   padding-top: 14px;
 }
