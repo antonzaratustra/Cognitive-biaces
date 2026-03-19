@@ -829,7 +829,7 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
             <div className="atlas-search__field">
               <Search size={16} />
               <input
-                placeholder="Например, якорь, подтверждение, память"
+                placeholder="Например, якорь, пик, подтверждение, нарратив, потеря"
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
@@ -838,6 +838,16 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
           </label>
 
           <div className="atlas-filter-list">
+            {graph.sections.map((section) => (
+              <button
+                key={section.id}
+                className={`filter-pill filter-pill--${section.colorToken}${activeSection === section.id ? ' filter-pill--active' : ''}`}
+                type="button"
+                onClick={() => setActiveSection(section.id)}
+              >
+                {section.shortTitle}
+              </button>
+            ))}
             <button
               className={activeSection === "all" ? "filter-pill filter-pill--active" : "filter-pill"}
               type="button"
@@ -845,16 +855,6 @@ export function AtlasViewer({ graph, initialSlug = null, lessons }: AtlasViewerP
             >
               Вся карта
             </button>
-            {graph.sections.map((section) => (
-              <button
-                key={section.id}
-                className={activeSection === section.id ? "filter-pill filter-pill--active" : "filter-pill"}
-                type="button"
-                onClick={() => setActiveSection(section.id)}
-              >
-                {section.shortTitle}
-              </button>
-            ))}
           </div>
         </div>
       </div>

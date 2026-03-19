@@ -226,6 +226,30 @@ main {
   background: rgba(255, 155, 56, 0.13);
 }
 
+.filter-pill--soft-blue.filter-pill--active {
+  border-color: rgba(134, 184, 255, 0.5);
+  background: rgba(134, 184, 255, 0.18);
+  color: #86b8ff;
+}
+
+.filter-pill--soft-green.filter-pill--active {
+  border-color: rgba(142, 211, 154, 0.5);
+  background: rgba(142, 211, 154, 0.18);
+  color: #8ed39a;
+}
+
+.filter-pill--soft-yellow.filter-pill--active {
+  border-color: rgba(240, 202, 105, 0.5);
+  background: rgba(240, 202, 105, 0.18);
+  color: #f0ca69;
+}
+
+.filter-pill--soft-red.filter-pill--active {
+  border-color: rgba(239, 140, 132, 0.5);
+  background: rgba(239, 140, 132, 0.18);
+  color: #ef8c84;
+}
+
 .hero-section,
 .lead-section,
 .detail-layout,
@@ -527,6 +551,12 @@ main {
   gap: 14px;
   align-content: start;
   border-top: 3px solid;
+  min-height: 280px;
+}
+
+.bias-card__actions {
+  margin-top: auto;
+  padding-top: 14px;
 }
 
 .bias-card--soft-blue {
@@ -655,16 +685,20 @@ main {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 14px;
-  border: 1px solid rgba(255, 214, 176, 0.12);
+  padding: 0 16px;
+  border: 1px solid rgba(255, 211, 165, 0.12);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.04);
+  min-height: 50px;
 }
 
 .atlas-search__field input {
   border: 0;
   background: transparent;
   padding: 0;
+  flex: 1;
+  width: 100%;
+  color: var(--text);
 }
 
 .atlas-filter-list {

@@ -302,38 +302,24 @@ export async function getLessonBySlug(slug: string) {
 }
 
 export async function getFeaturedLessons() {
-  const snapshot = await getContentSnapshot();
-  
-  // Выбираем 6 самых цепляющих искажений из всех 4 сфер
+  // Используем статические данные чтобы гарантировать наличие всех 4 сфер
+  // В статике точно есть все 6 искажений из разных сфер
   const featuredSlugs = [
     // Когда запоминаем и вспоминаем (memory) - жёлтый
     "peak-end-rule",
-    "hindsight-bias",
     // Когда много информации (information) - синий
     "availability-heuristic",
     "confirmation-bias",
     // Когда не хватает смысла (meaning) - красный
     "narrative-fallacy",
+    "belief-bias",
     // Когда быстро реагируем (reaction) - зелёный
     "loss-aversion"
   ];
   
-  const featured = featuredSlugs
-    .map((slug) => snapshot.lessons.find((lesson) => lesson.slug === slug) || null)
+  return featuredSlugs
+    .map((slug) => staticLessons.find((lesson) => lesson.slug === slug) || null)
     .filter((lesson): lesson is Lesson => Boolean(lesson));
-  
-  // Если в базе меньше 6, доберём остальными из базы
-  if (featured.length < 6) {
-    const existingSlugs = new Set(featured.map(l => l.slug));
-    for (const lesson of snapshot.lessons) {
-      if (!existingSlugs.has(lesson.slug)) {
-        featured.push(lesson);
-        if (featured.length >= 6) break;
-      }
-    }
-  }
-  
-  return featured.slice(0, 6);
 }
 
 export async function getAllSections() {
