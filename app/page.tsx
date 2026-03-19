@@ -186,11 +186,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <div className="section-copy">
             <div className="eyebrow">🚀 Забрать старт</div>
             <h2>Оставь контакт, чтобы не потерять вход, новые разделы и практику.</h2>
-            <p>
+            <p className="lead-intro">
               Если курс тебе откликается, лучше забрать место сейчас: старт придет в Telegram, а обновления и новые
               квизы не потеряются в шуме.
             </p>
-            
+
             <div className="lead-benefits">
               <div className="lead-benefit">
                 <span className="lead-benefit__icon">📬</span>
@@ -211,6 +211,27 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 <div>
                   <strong>Практика через квизы</strong>
                   <span>Проверяй себя на реальных примерах и сценариях</span>
+                </div>
+              </div>
+              <div className="lead-benefit">
+                <span className="lead-benefit__icon">📱</span>
+                <div>
+                  <strong>Удобный формат</strong>
+                  <span>Короткие уроки в Telegram — можно проходить в дороге, между делами</span>
+                </div>
+              </div>
+              <div className="lead-benefit">
+                <span className="lead-benefit__icon">🔒</span>
+                <div>
+                  <strong>Без спама</strong>
+                  <span>Только важные обновления о новых уроках и практиках</span>
+                </div>
+              </div>
+              <div className="lead-benefit">
+                <span className="lead-benefit__icon">✨</span>
+                <div>
+                  <strong>Бесплатный базовый курс</strong>
+                  <span>160+ уроков без обязательных платежей</span>
                 </div>
               </div>
             </div>

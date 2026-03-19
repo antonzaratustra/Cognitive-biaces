@@ -318,9 +318,22 @@ export async function getFeaturedLessons() {
     "loss-aversion"
   ];
   
-  return featuredSlugs
+  const featured = featuredSlugs
     .map((slug) => snapshot.lessons.find((lesson) => lesson.slug === slug) || null)
     .filter((lesson): lesson is Lesson => Boolean(lesson));
+  
+  // Если в базе меньше 6, доберём остальными из базы
+  if (featured.length < 6) {
+    const existingSlugs = new Set(featured.map(l => l.slug));
+    for (const lesson of snapshot.lessons) {
+      if (!existingSlugs.has(lesson.slug)) {
+        featured.push(lesson);
+        if (featured.length >= 6) break;
+      }
+    }
+  }
+  
+  return featured.slice(0, 6);
 }
 
 export async function getAllSections() {
