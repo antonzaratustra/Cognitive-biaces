@@ -1,0 +1,65 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select\n  claim.should_process,\n  claim.processed_at,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ $json.first_name }}'::text as first_name\nfrom public.cb_claim_command(\n  '{{ $json.tg_id }}'::text,\n  'start_command'::text,\n  jsonb_build_object('chat_id', '{{ $json.chat_id }}'::text),\n  interval '2 seconds'\n) as claim;",
+        "options": {}
+      },
+      "id": "claim-start-command",
+      "name": "Claim Start Command",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.should_process === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "start-claimed",
+      "name": "Start Claimed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [224, 0]
+    },
+    {
+      "parameters": {},
+      "id": "ignore-duplicate-start",
+      "name": "Ignore Duplicate Start",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [448, -80]
+    }
+  ],
+  "connections": {
+    "Claim Start Command": {
+      "main": [[{ "node": "Start Claimed?", "type": "main", "index": 0 }]]
+    },
+    "Start Claimed?": {
+      "main": [
+        [],
+        [{ "node": "Ignore Duplicate Start", "type": "main", "index": 0 }]
+      ]
+    }
+  }
+}

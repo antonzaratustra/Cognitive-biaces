@@ -683,10 +683,53 @@ const workflow = {
       { typeVersion: 1.2 }
     ),
     node(
+      "claim-start-command",
+      "Claim Start Command",
+      "n8n-nodes-base.postgres",
+      [-1936, 1392],
+      {
+        operation: "executeQuery",
+        query:
+          "select\n  claim.should_process,\n  claim.processed_at,\n  '{{ $json.tg_id }}'::text as tg_id,\n  '{{ $json.chat_id }}'::text as chat_id,\n  '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text as first_name,\n  '{{ String($json.last_name || '').replace(/'/g, \"''\") }}'::text as last_name,\n  '{{ String($json.tg_username || '').replace(/'/g, \"''\") }}'::text as tg_username,\n  '{{ $json.site_url }}'::text as site_url,\n  '{{ $json.miniapp_url }}'::text as miniapp_url,\n  '{{ $json.quiz_url }}'::text as quiz_url,\n  '{{ $json.openrouter_endpoint }}'::text as openrouter_endpoint,\n  '{{ $json.openrouter_model }}'::text as openrouter_model,\n  '{{ String($json.openrouter_api_key || '').replace(/'/g, \"''\") }}'::text as openrouter_api_key,\n  '{{ String($json.start_payload || '').replace(/'/g, \"''\") }}'::text as start_payload\nfrom public.cb_claim_command(\n  '{{ $json.tg_id }}'::text,\n  'start_command'::text,\n  jsonb_build_object(\n    'chat_id', '{{ $json.chat_id }}'::text,\n    'first_name', '{{ String($json.first_name || '').replace(/'/g, \"''\") }}'::text,\n    'last_name', '{{ String($json.last_name || '').replace(/'/g, \"''\") }}'::text,\n    'tg_username', '{{ String($json.tg_username || '').replace(/'/g, \"''\") }}'::text,\n    'start_payload', '{{ String($json.start_payload || '').replace(/'/g, \"''\") }}'::text\n  ),\n  interval '2 seconds'\n) as claim;",
+        options: {}
+      },
+      { typeVersion: 2.6, alwaysOutputData: true }
+    ),
+    node(
+      "start-claimed",
+      "Start Claimed?",
+      "n8n-nodes-base.if",
+      [-1712, 1392],
+      {
+        conditions: {
+          options: { caseSensitive: true, leftValue: "", typeValidation: "strict", version: 2 },
+          conditions: [
+            {
+              id: "start-claimed-condition",
+              leftValue: "={{ $json.should_process === true }}",
+              rightValue: "",
+              operator: { type: "boolean", operation: "true", singleValue: true }
+            }
+          ],
+          combinator: "and"
+        },
+        options: {}
+      },
+      { typeVersion: 2.2 }
+    ),
+    node(
+      "ignore-duplicate-start",
+      "Ignore Duplicate Start",
+      "n8n-nodes-base.noOp",
+      [-1488, 1504],
+      {},
+      { typeVersion: 1 }
+    ),
+    node(
       "get-start-user",
       "Get Start User",
       "n8n-nodes-base.postgres",
-      [-1936, 1392],
+      [-1488, 1392],
       {
         operation: "executeQuery",
         query:
@@ -699,7 +742,7 @@ const workflow = {
       "start-registered",
       "Start Registered?",
       "n8n-nodes-base.if",
-      [-1712, 1392],
+      [-1264, 1392],
       {
         conditions: {
           options: { caseSensitive: true, leftValue: "", typeValidation: "strict", version: 2 },
@@ -721,7 +764,7 @@ const workflow = {
       "create-start-user",
       "Create Start User",
       "n8n-nodes-base.postgres",
-      [-1488, 1520],
+      [-1040, 1520],
       {
         operation: "executeQuery",
         query:
@@ -734,7 +777,7 @@ const workflow = {
       "start-has-lesson-queue",
       "Start Has Lesson Queue?",
       "n8n-nodes-base.if",
-      [-1264, 1520],
+      [-816, 1520],
       {
         conditions: {
           options: { caseSensitive: true, leftValue: "", typeValidation: "strict", version: 2 },
@@ -756,7 +799,7 @@ const workflow = {
       "send-start-already-registered",
       "Send Start Already Registered",
       "n8n-nodes-base.telegram",
-      [-1040, 1456],
+      [-592, 1456],
       {
         chatId: "={{ $json.chat_id }}",
         text:
@@ -771,7 +814,7 @@ const workflow = {
       "send-start-greeting",
       "Send Start Greeting",
       "n8n-nodes-base.telegram",
-      [-1488, 1328],
+      [-1040, 1328],
       {
         chatId: "={{ $json.chat_id }}",
         text:
@@ -786,7 +829,7 @@ const workflow = {
       "prepare-course-entry-start",
       "Prepare Course Entry (Start)",
       "n8n-nodes-base.code",
-      [-1488, 1408],
+      [-1040, 1408],
       {
         jsCode:
           "const source = $node['Create Start User']?.json || {};\nreturn [{\n  json: {\n    ...source,\n    course_entry_source: 'start'\n  }\n}];"
@@ -1509,8 +1552,17 @@ const workflow = {
     },
     "Is /start?": {
       main: [
-        [{ node: "Get Start User", type: "main", index: 0 }],
+        [{ node: "Claim Start Command", type: "main", index: 0 }],
         [{ node: "Send Unknown Command", type: "main", index: 0 }]
+      ]
+    },
+    "Claim Start Command": {
+      main: [[{ node: "Start Claimed?", type: "main", index: 0 }]]
+    },
+    "Start Claimed?": {
+      main: [
+        [{ node: "Get Start User", type: "main", index: 0 }],
+        [{ node: "Ignore Duplicate Start", type: "main", index: 0 }]
       ]
     },
     "Get Start User": {
